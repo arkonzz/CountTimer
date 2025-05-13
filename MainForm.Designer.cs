@@ -94,8 +94,6 @@
             countdown_timer.Name = "countdown_timer";
             countdown_timer.Size = new Size(196, 44);
             countdown_timer.TabIndex = 1;
-            countdown_timer.Text = "2025-06-30 17:30:00";
-            countdown_timer.Value = new DateTime(2025, 6, 30, 17, 30, 0, 0);
             // 
             // lblCountdown
             // 
@@ -119,7 +117,7 @@
             notifyIcon_cd.Icon = (Icon)resources.GetObject("notifyIcon_cd.Icon");
             notifyIcon_cd.Text = "notifyIcon_cd";
             notifyIcon_cd.Visible = true;
-            notifyIcon_cd.MouseDoubleClick += notifyIcon_Click;
+            notifyIcon_cd.MouseClick += notifyIcon_Click;
             // 
             // contextMenuStrip1
             // 

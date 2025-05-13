@@ -1,4 +1,5 @@
-﻿using AntdUI;
+﻿using System.Configuration;
+using AntdUI;
 using Timer = System.Windows.Forms.Timer;
 
 namespace CountTimer
@@ -8,11 +9,16 @@ namespace CountTimer
         private DateTime _targetTime;
         private readonly Timer _timer = new Timer();
         private bool dispose = false;
+        private DateTime lastTime;
+        private Configuration config;
         public MainForm()
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
             this.TopMost = true;
+            countdown_timer.Value = Convert.ToDateTime(ConfigurationManager.AppSettings["lastTime"]); 
+            // 获取配置文件
+            config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         }
 
         private void btn_countdown_Click(object sender, EventArgs e)
@@ -23,10 +29,13 @@ namespace CountTimer
                 MessageBox.Show("请选择未来的时间！");
                 return;
             }
-
-
             _timer.Start();
-            //UpdateCountdown();
+            // 修改属性值
+            config.AppSettings.Settings["lastTime"].Value = countdown_timer.Text;
+            // 保存配置文件
+            config.Save(ConfigurationSaveMode.Modified);
+            // 刷新配置文件
+            ConfigurationManager.RefreshSection("appSettings");
         }
         private void UpdateCountdown()
         {
@@ -112,22 +121,6 @@ namespace CountTimer
             }
 
         }
-
-        //private void MainForm_Load(object sender, EventArgs e)
-        //{
-        //    base.OnLoad(e);
-
-        //    // 获取主显示器工作区域（排除任务栏）
-        //    Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
-
-        //    // 计算右下角坐标
-        //    int x = workingArea.Right - this.Width;
-        //    int y = workingArea.Bottom - this.Height;
-
-        //    // 设置窗体位置
-        //    this.StartPosition = FormStartPosition.Manual;
-        //    this.Location = new Point(x, y);
-        //}
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
