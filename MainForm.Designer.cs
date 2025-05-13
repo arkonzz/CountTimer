@@ -30,6 +30,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             panel1 = new AntdUI.Panel();
             pageHeader1 = new AntdUI.PageHeader();
             button1 = new AntdUI.Button();
@@ -37,7 +38,11 @@
             countdown_timer = new AntdUI.DatePicker();
             lblCountdown = new AntdUI.Label();
             timer1 = new System.Windows.Forms.Timer(components);
+            notifyIcon_cd = new NotifyIcon(components);
+            contextMenuStrip1 = new ContextMenuStrip(components);
+            退出ToolStripMenuItem = new ToolStripMenuItem();
             panel1.SuspendLayout();
+            contextMenuStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // panel1
@@ -98,7 +103,7 @@
             lblCountdown.Font = new Font("Microsoft YaHei UI", 15F);
             lblCountdown.Location = new Point(0, 87);
             lblCountdown.Name = "lblCountdown";
-            lblCountdown.Size = new Size(421, 238);
+            lblCountdown.Size = new Size(421, 147);
             lblCountdown.TabIndex = 1;
             lblCountdown.Text = "显示时间";
             lblCountdown.TextAlign = ContentAlignment.MiddleCenter;
@@ -108,15 +113,39 @@
             timer1.Enabled = true;
             timer1.Interval = 1000;
             // 
+            // notifyIcon_cd
+            // 
+            notifyIcon_cd.ContextMenuStrip = contextMenuStrip1;
+            notifyIcon_cd.Icon = (Icon)resources.GetObject("notifyIcon_cd.Icon");
+            notifyIcon_cd.Text = "notifyIcon_cd";
+            notifyIcon_cd.Visible = true;
+            notifyIcon_cd.MouseDoubleClick += notifyIcon_Click;
+            // 
+            // contextMenuStrip1
+            // 
+            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { 退出ToolStripMenuItem });
+            contextMenuStrip1.Name = "contextMenuStrip1";
+            contextMenuStrip1.Size = new Size(101, 26);
+            // 
+            // 退出ToolStripMenuItem
+            // 
+            退出ToolStripMenuItem.Name = "退出ToolStripMenuItem";
+            退出ToolStripMenuItem.Size = new Size(100, 22);
+            退出ToolStripMenuItem.Text = "退出";
+            退出ToolStripMenuItem.Click += exitMenuItem_Click;
+            // 
             // MainForm
             // 
-            ClientSize = new Size(421, 325);
+            ClientSize = new Size(421, 234);
             Controls.Add(lblCountdown);
             Controls.Add(panel1);
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "MainForm";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "MainForm";
+            FormClosing += MainForm_FormClosing;
             panel1.ResumeLayout(false);
+            contextMenuStrip1.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -129,5 +158,8 @@
         private AntdUI.Button button1;
         private AntdUI.PageHeader pageHeader1;
         private System.Windows.Forms.Timer timer1;
+        private NotifyIcon notifyIcon_cd;
+        private ContextMenuStrip contextMenuStrip1;
+        private ToolStripMenuItem 退出ToolStripMenuItem;
     }
 }
