@@ -37,7 +37,6 @@
             btn_countdown = new AntdUI.Button();
             countdown_timer = new AntdUI.DatePicker();
             lblCountdown = new AntdUI.Label();
-            timer1 = new System.Windows.Forms.Timer(components);
             notifyIcon_cd = new NotifyIcon(components);
             contextMenuStrip1 = new ContextMenuStrip(components);
             退出ToolStripMenuItem = new ToolStripMenuItem();
@@ -76,6 +75,7 @@
             button1.Size = new Size(97, 40);
             button1.TabIndex = 3;
             button1.Text = "倒计时暂停";
+            button1.Click += button1_Click;
             // 
             // btn_countdown
             // 
@@ -105,11 +105,6 @@
             lblCountdown.TabIndex = 1;
             lblCountdown.Text = "显示时间";
             lblCountdown.TextAlign = ContentAlignment.MiddleCenter;
-            // 
-            // timer1
-            // 
-            timer1.Enabled = true;
-            timer1.Interval = 1000;
             // 
             // notifyIcon_cd
             // 
@@ -155,7 +150,6 @@
         private AntdUI.Label lblCountdown;
         private AntdUI.Button button1;
         private AntdUI.PageHeader pageHeader1;
-        private System.Windows.Forms.Timer timer1;
         private NotifyIcon notifyIcon_cd;
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem 退出ToolStripMenuItem;

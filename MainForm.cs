@@ -16,7 +16,7 @@ namespace CountTimer
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
             this.TopMost = true;
-            countdown_timer.Value = Convert.ToDateTime(ConfigurationManager.AppSettings["lastTime"]); 
+            countdown_timer.Value = Convert.ToDateTime(ConfigurationManager.AppSettings["lastTime"]);
             // 获取配置文件
             config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         }
@@ -135,6 +135,11 @@ namespace CountTimer
             // 设置窗体位置
             this.StartPosition = FormStartPosition.Manual;
             this.Location = new Point(x, y);
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            _timer.Stop();
         }
     }
 }
