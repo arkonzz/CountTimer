@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <PackageReference Include="AntdUI" Version="1.9.12" />
+    <PackageReference Include="SqlSugarCore" Version="5.1.4.193" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,6 +32,16 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Db\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Db\ToDoDb.db">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

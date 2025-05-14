@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CountTimer
+namespace CountTimer.Service
 {
-    public class AppConfig
+    public interface ToDoThingService
     {
-        public string lastTime { get; set; }
     }
 }
