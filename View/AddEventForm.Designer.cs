@@ -1,0 +1,123 @@
+﻿namespace CountTimer.View
+{
+    partial class AddEventForm
+    {
+        /// <summary>
+        /// Required designer variable.
+        /// </summary>
+        private System.ComponentModel.IContainer components = null;
+
+        /// <summary>
+        /// Clean up any resources being used.
+        /// </summary>
+        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        #region Windows Form Designer generated code
+
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
+            panel1 = new AntdUI.Panel();
+            btn_add = new AntdUI.Button();
+            btn_close = new AntdUI.Button();
+            dp_endtime = new AntdUI.DatePicker();
+            panel2 = new AntdUI.Panel();
+            input_info = new AntdUI.Input();
+            panel1.SuspendLayout();
+            panel2.SuspendLayout();
+            SuspendLayout();
+            // 
+            // panel1
+            // 
+            panel1.Controls.Add(dp_endtime);
+            panel1.Controls.Add(btn_close);
+            panel1.Controls.Add(btn_add);
+            panel1.Dock = DockStyle.Top;
+            panel1.Location = new Point(0, 0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(405, 66);
+            panel1.TabIndex = 0;
+            panel1.Text = "panel1";
+            // 
+            // btn_add
+            // 
+            btn_add.Location = new Point(246, 12);
+            btn_add.Name = "btn_add";
+            btn_add.Size = new Size(75, 40);
+            btn_add.TabIndex = 0;
+            btn_add.Text = "新增";
+            btn_add.Type = AntdUI.TTypeMini.Primary;
+            // 
+            // btn_close
+            // 
+            btn_close.Location = new Point(327, 12);
+            btn_close.Name = "btn_close";
+            btn_close.Size = new Size(75, 40);
+            btn_close.TabIndex = 1;
+            btn_close.Text = "取消";
+            btn_close.Click += btn_close_Click;
+            // 
+            // dp_endtime
+            // 
+            dp_endtime.Format = "yyyy-MM-dd HH:mm:ss";
+            dp_endtime.Location = new Point(12, 12);
+            dp_endtime.Name = "dp_endtime";
+            dp_endtime.PlaceholderText = "请选择事件";
+            dp_endtime.Size = new Size(219, 40);
+            dp_endtime.TabIndex = 2;
+            // 
+            // panel2
+            // 
+            panel2.Controls.Add(input_info);
+            panel2.Dock = DockStyle.Bottom;
+            panel2.Location = new Point(0, 67);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(405, 110);
+            panel2.TabIndex = 1;
+            panel2.Text = "panel2";
+            // 
+            // input_info
+            // 
+            input_info.Dock = DockStyle.Fill;
+            input_info.Location = new Point(0, 0);
+            input_info.Name = "input_info";
+            input_info.PlaceholderText = "请输入内容";
+            input_info.Size = new Size(405, 110);
+            input_info.TabIndex = 0;
+            // 
+            // AddEventForm
+            // 
+            AutoScaleDimensions = new SizeF(7F, 17F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(405, 177);
+            Controls.Add(panel2);
+            Controls.Add(panel1);
+            Name = "AddEventForm";
+            StartPosition = FormStartPosition.CenterScreen;
+            Text = "新增事件";
+            panel1.ResumeLayout(false);
+            panel2.ResumeLayout(false);
+            ResumeLayout(false);
+        }
+
+        #endregion
+
+        private AntdUI.Panel panel1;
+        private AntdUI.Button btn_close;
+        private AntdUI.Button btn_add;
+        private AntdUI.DatePicker dp_endtime;
+        private AntdUI.Panel panel2;
+        private AntdUI.Input input_info;
+    }
+}

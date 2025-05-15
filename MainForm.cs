@@ -1,5 +1,6 @@
 ﻿using System.Configuration;
 using AntdUI;
+using CountTimer.View;
 using Timer = System.Windows.Forms.Timer;
 
 namespace CountTimer
@@ -11,19 +12,20 @@ namespace CountTimer
         private bool dispose = false;
         private DateTime lastTime;
         private Configuration config;
+        private AddEventForm addEventForm;
         public MainForm()
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
             this.TopMost = true;
-            countdown_timer.Value = Convert.ToDateTime(ConfigurationManager.AppSettings["lastTime"]);
+            lastTime = Convert.ToDateTime(ConfigurationManager.AppSettings["lastTime"]);
             // 获取配置文件
             config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
         }
 
         private void btn_countdown_Click(object sender, EventArgs e)
         {
-            _targetTime = (DateTime)countdown_timer.Value;
+            _targetTime = lastTime;
             if (_targetTime <= DateTime.Now)
             {
                 MessageBox.Show("请选择未来的时间！");
@@ -31,7 +33,7 @@ namespace CountTimer
             }
             _timer.Start();
             // 修改属性值
-            config.AppSettings.Settings["lastTime"].Value = countdown_timer.Text;
+            config.AppSettings.Settings["lastTime"].Value = lastTime.ToString();
             // 保存配置文件
             config.Save(ConfigurationSaveMode.Modified);
             // 刷新配置文件
@@ -77,11 +79,6 @@ namespace CountTimer
             }
 
         }
-
-
-
-
-
 
         // 在托盘图标右键点菜单“显示界面”时显示窗体
         private void showWindowMenuItem_Click(object sender, EventArgs e)
@@ -140,6 +137,16 @@ namespace CountTimer
         private void button1_Click(object sender, EventArgs e)
         {
             _timer.Stop();
+        }
+
+        private void btn_addEvent_Click(object sender, EventArgs e)
+        {
+            if (addEventForm == null)
+            {
+                addEventForm = new AddEventForm();
+            }
+
+            addEventForm.Show();
         }
     }
 }
