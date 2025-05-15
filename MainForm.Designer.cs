@@ -78,6 +78,7 @@
             select_event.PlaceholderText = "请选择事件";
             select_event.Size = new Size(184, 40);
             select_event.TabIndex = 5;
+            select_event.SelectedValueChanged += select_event_SelectedValueChanged;
             // 
             // pageHeader1
             // 

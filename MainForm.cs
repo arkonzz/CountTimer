@@ -29,7 +29,7 @@ namespace CountTimer
 
         private void btn_countdown_Click(object sender, EventArgs e)
         {
-            
+
             ToDoThing toDoThing = service.GetById(Convert.ToInt32(select_event.SelectedValue));
             _targetTime = Convert.ToDateTime(toDoThing.endTime);
             if (_targetTime <= DateTime.Now)
@@ -155,12 +155,18 @@ namespace CountTimer
             {
                 addEventForm = new AddEventForm();
             }
-            addEventForm.DataUpdated += () => {
+            addEventForm.DataUpdated += () =>
+            {
                 select_event.Items.Clear();
                 initSelectEvent();
             };
             addEventForm.Show();
-           
+
+        }
+
+        private void select_event_SelectedValueChanged(object sender, ObjectNEventArgs e)
+        {
+            btn_countdown.PerformClick();
         }
     }
 }
