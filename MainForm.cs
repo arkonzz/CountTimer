@@ -18,13 +18,30 @@ namespace CountTimer
         private AddEventForm addEventForm;
         private ToDoThingService service;
         List<ToDoThing> toDoThings;
+        private CancellationTokenSource _cts;
         public MainForm()
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
             this.TopMost = true;
             service = new ToDoThingServiceImpl();
-            initSelectEvent();
+            _cts = new CancellationTokenSource();
+            deleteExpiredEvent();
+        }
+
+        private void deleteExpiredEvent()
+        {
+            Task.Run(async () => {
+                while (!_cts.IsCancellationRequested)
+                 {
+                     service.deleteByTime(DateTime.Now);
+                     select_event.Invoke(() => {
+                       initSelectEvent();
+                      });
+                    await Task.Delay(30 * 1000); // 添加await关键字
+                }
+                
+             });
         }
 
         private void btn_countdown_Click(object sender, EventArgs e)
@@ -62,6 +79,7 @@ namespace CountTimer
         }
         private void initSelectEvent()
         {
+            select_event.Items.Clear();
             toDoThings = service.GetTodoList();
             var list = new List<SelectItem>();
             foreach (var item in toDoThings)
@@ -157,7 +175,7 @@ namespace CountTimer
             }
             addEventForm.DataUpdated += () =>
             {
-                select_event.Items.Clear();
+                
                 initSelectEvent();
             };
             addEventForm.Show();

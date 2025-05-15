@@ -22,6 +22,10 @@ namespace CountTimer.Service.ServiceImpl
         public ToDoThing GetById(int id) {
             return Db.Queryable<ToDoThing>().InSingle(id);
         }
-    
+
+        public int deleteByTime(DateTime time)
+        {
+           return Db.Deleteable<ToDoThing>().Where(it => Convert.ToDateTime(it.endTime) < time).ExecuteCommand();
+        }
     }
 }

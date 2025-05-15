@@ -15,5 +15,8 @@ namespace CountTimer.Service
        List<ToDoThing> GetTodoList();
 
        ToDoThing GetById(int id);
+
+        int deleteByTime(DateTime time);
+     
     }
 }
