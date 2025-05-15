@@ -29,9 +29,9 @@
         private void InitializeComponent()
         {
             panel1 = new AntdUI.Panel();
-            btn_add = new AntdUI.Button();
-            btn_close = new AntdUI.Button();
             dp_endtime = new AntdUI.DatePicker();
+            btn_close = new AntdUI.Button();
+            btn_add = new AntdUI.Button();
             panel2 = new AntdUI.Panel();
             input_info = new AntdUI.Input();
             panel1.SuspendLayout();
@@ -50,14 +50,14 @@
             panel1.TabIndex = 0;
             panel1.Text = "panel1";
             // 
-            // btn_add
+            // dp_endtime
             // 
-            btn_add.Location = new Point(246, 12);
-            btn_add.Name = "btn_add";
-            btn_add.Size = new Size(75, 40);
-            btn_add.TabIndex = 0;
-            btn_add.Text = "新增";
-            btn_add.Type = AntdUI.TTypeMini.Primary;
+            dp_endtime.Format = "yyyy-MM-dd HH:mm:ss";
+            dp_endtime.Location = new Point(12, 12);
+            dp_endtime.Name = "dp_endtime";
+            dp_endtime.PlaceholderText = "请选择事件";
+            dp_endtime.Size = new Size(219, 40);
+            dp_endtime.TabIndex = 2;
             // 
             // btn_close
             // 
@@ -68,14 +68,15 @@
             btn_close.Text = "取消";
             btn_close.Click += btn_close_Click;
             // 
-            // dp_endtime
+            // btn_add
             // 
-            dp_endtime.Format = "yyyy-MM-dd HH:mm:ss";
-            dp_endtime.Location = new Point(12, 12);
-            dp_endtime.Name = "dp_endtime";
-            dp_endtime.PlaceholderText = "请选择事件";
-            dp_endtime.Size = new Size(219, 40);
-            dp_endtime.TabIndex = 2;
+            btn_add.Location = new Point(246, 12);
+            btn_add.Name = "btn_add";
+            btn_add.Size = new Size(75, 40);
+            btn_add.TabIndex = 0;
+            btn_add.Text = "新增";
+            btn_add.Type = AntdUI.TTypeMini.Primary;
+            btn_add.Click += btn_add_Click;
             // 
             // panel2
             // 

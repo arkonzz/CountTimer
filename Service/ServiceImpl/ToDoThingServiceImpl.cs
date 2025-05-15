@@ -11,7 +11,7 @@ namespace CountTimer.Service.ServiceImpl
     {
         public int AddToDoThing(ToDoThing toDoThing)
         {
-            throw new NotImplementedException();
+           return Db.Insertable(toDoThing).ExecuteCommand();
         }
 
         public List<ToDoThing> GetTodoList()
@@ -19,5 +19,9 @@ namespace CountTimer.Service.ServiceImpl
             var list = Db.Queryable<ToDoThing>().ToList();
             return list;
         }
+        public ToDoThing GetById(int id) {
+            return Db.Queryable<ToDoThing>().InSingle(id);
+        }
+    
     }
 }

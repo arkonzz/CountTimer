@@ -55,7 +55,7 @@
             panel1.Dock = DockStyle.Top;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(472, 87);
+            panel1.Size = new Size(472, 81);
             panel1.TabIndex = 0;
             panel1.Text = "panel1";
             // 
@@ -71,11 +71,13 @@
             // 
             // select_event
             // 
+            select_event.List = true;
             select_event.Location = new Point(12, 32);
+            select_event.MaxCount = 5;
             select_event.Name = "select_event";
+            select_event.PlaceholderText = "请选择事件";
             select_event.Size = new Size(184, 40);
             select_event.TabIndex = 5;
-            select_event.Text = "请选择事件";
             // 
             // pageHeader1
             // 
@@ -111,9 +113,9 @@
             // 
             lblCountdown.Dock = DockStyle.Fill;
             lblCountdown.Font = new Font("Microsoft YaHei UI", 15F);
-            lblCountdown.Location = new Point(0, 87);
+            lblCountdown.Location = new Point(0, 81);
             lblCountdown.Name = "lblCountdown";
-            lblCountdown.Size = new Size(472, 147);
+            lblCountdown.Size = new Size(472, 153);
             lblCountdown.TabIndex = 1;
             lblCountdown.Text = "显示时间";
             lblCountdown.TextAlign = ContentAlignment.MiddleCenter;

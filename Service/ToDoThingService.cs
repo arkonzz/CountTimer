@@ -13,5 +13,7 @@ namespace CountTimer.Service
        int AddToDoThing(ToDoThing toDoThing);
 
        List<ToDoThing> GetTodoList();
+
+       ToDoThing GetById(int id);
     }
 }

@@ -1,5 +1,9 @@
 ﻿using System.Configuration;
+using System.Windows.Forms;
 using AntdUI;
+using CountTimer.Model;
+using CountTimer.Service;
+using CountTimer.Service.ServiceImpl;
 using CountTimer.View;
 using Timer = System.Windows.Forms.Timer;
 
@@ -11,33 +15,29 @@ namespace CountTimer
         private readonly Timer _timer = new Timer();
         private bool dispose = false;
         private DateTime lastTime;
-        private Configuration config;
         private AddEventForm addEventForm;
+        private ToDoThingService service;
+        List<ToDoThing> toDoThings;
         public MainForm()
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
             this.TopMost = true;
-            lastTime = Convert.ToDateTime(ConfigurationManager.AppSettings["lastTime"]);
-            // 获取配置文件
-            config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            service = new ToDoThingServiceImpl();
+            initSelectEvent();
         }
 
         private void btn_countdown_Click(object sender, EventArgs e)
         {
-            _targetTime = lastTime;
+            
+            ToDoThing toDoThing = service.GetById(Convert.ToInt32(select_event.SelectedValue));
+            _targetTime = Convert.ToDateTime(toDoThing.endTime);
             if (_targetTime <= DateTime.Now)
             {
-                MessageBox.Show("请选择未来的时间！");
+                MessageBox.Show("已超时");
                 return;
             }
             _timer.Start();
-            // 修改属性值
-            config.AppSettings.Settings["lastTime"].Value = lastTime.ToString();
-            // 保存配置文件
-            config.Save(ConfigurationSaveMode.Modified);
-            // 刷新配置文件
-            ConfigurationManager.RefreshSection("appSettings");
         }
         private void UpdateCountdown()
         {
@@ -59,6 +59,16 @@ namespace CountTimer
             return ts.TotalSeconds > 0
                 ? $"{ts.Days:D2} 天 {ts.Hours:D2} 时 {ts.Minutes:D2} 分 {ts.Seconds:D2} 秒"
                 : "00 天 00 时 00 分 00 秒";
+        }
+        private void initSelectEvent()
+        {
+            toDoThings = service.GetTodoList();
+            var list = new List<SelectItem>();
+            foreach (var item in toDoThings)
+            {
+                list.Add(new SelectItem(item.toDoInfo, item.Id));
+            }
+            select_event.Items.AddRange(list.ToArray());
         }
 
         /// <summary>
@@ -145,8 +155,12 @@ namespace CountTimer
             {
                 addEventForm = new AddEventForm();
             }
-
+            addEventForm.DataUpdated += () => {
+                select_event.Items.Clear();
+                initSelectEvent();
+            };
             addEventForm.Show();
+           
         }
     }
 }

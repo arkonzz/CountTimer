@@ -40,7 +40,7 @@
 
   <ItemGroup>
     <None Update="Db\ToDoDb.db">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
