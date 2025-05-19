@@ -42,6 +42,7 @@ namespace CountTimer.View
             toDoThing.toDoInfo=input_info.Text;
             toDoThing.isMailed=false;
             toDoThing.endTime = dp_endtime.Text;
+            toDoThing.isRegular= select_regular.SelectedIndex==1 ? false : true;
             if (service.AddToDoThing(toDoThing) > 0)
             {
                 AntdUI.Message.success(window, "新增成功", autoClose: 1);

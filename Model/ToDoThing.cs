@@ -14,6 +14,8 @@ namespace CountTimer.Model
         public string endTime { get; set; }
         [SugarColumn(ColumnName = "is_mailed")]
         public bool isMailed { get; set; }
+        [SugarColumn(ColumnName = "is_regular")]
+        public bool isRegular { get; set;}
         }
   
 }

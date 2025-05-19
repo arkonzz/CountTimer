@@ -2,9 +2,11 @@
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Share;
+using Dm;
 using Dm.util;
 using Microsoft.VisualBasic.ApplicationServices;
 using SqlSugar;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CountTimer.Service.ServiceImpl
 {
@@ -26,21 +28,16 @@ namespace CountTimer.Service.ServiceImpl
 
         public int deleteByTime(DateTime time)
         {
-           return Db.Deleteable<ToDoThing>().Where(it => Convert.ToDateTime(it.endTime) < time).ExecuteCommand();
+           return Db.Deleteable<ToDoThing>().Where(it => Convert.ToDateTime(it.endTime) < time&&it.isRegular==false).ExecuteCommand();
         }
         public int insertRegularEvent()
         {
-            List<ToDoThing> things = [];
-            things.Add(new ToDoThing() {
-                toDoInfo = "下班",
-                endTime = DateTime.Today.AddHours(17).AddMinutes(30).ToString("yyyy-MM-dd HH:mm:ss")
-            });
-            things.Add(new ToDoThing()
-            {
-                toDoInfo = "午休",
-                endTime = DateTime.Today.AddHours(11).AddMinutes(22).ToString("yyyy-MM-dd HH:mm:ss")
-            });
-            return Db.Insertable(things).ExecuteCommand();
+            var today = DateTime.Today;
+            var result = Db.Updateable<ToDoThing>()
+                .SetColumns(it => new ToDoThing() { it.endTime = "" })
+                .Where(it => it.isRegular == true)
+                .ExecuteCommand();
+
         }
     }
 }
