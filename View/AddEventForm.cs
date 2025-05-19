@@ -1,4 +1,5 @@
-﻿using AntdUI;
+﻿using System.Configuration;
+using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Service.ServiceImpl;
@@ -12,6 +13,7 @@ namespace CountTimer.View
         private Window window;
         private ToDoThing toDoThing;
         public event Action DataUpdated;
+        
         public AddEventForm()
         {
             InitializeComponent();
