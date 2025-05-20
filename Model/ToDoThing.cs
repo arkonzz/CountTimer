@@ -16,6 +16,11 @@ namespace CountTimer.Model
         public bool isMailed { get; set; }
         [SugarColumn(ColumnName = "is_regular")]
         public bool isRegular { get; set;}
+
+        public override string ToString()
+        {
+            return toDoInfo;
+        }
     }
   
 }

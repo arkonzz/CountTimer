@@ -27,7 +27,6 @@ namespace CountTimer
             window = this;
             service = new ToDoThingServiceImpl();
             _cts = new CancellationTokenSource();
-
             service.updateRegularEvent();
             deleteExpiredEvent();
         }
@@ -49,8 +48,12 @@ namespace CountTimer
 
         private void btn_countdown_Click(object sender, EventArgs e)
         {
-
-            ToDoThing toDoThing = service.GetById(Convert.ToInt32(select_event.SelectedValue));
+            if(select_event.SelectedValue == null)
+            {
+                AntdUI.Message.error(window, "请选择事件", autoClose: 2);
+                return;
+            }
+            ToDoThing toDoThing = (ToDoThing)select_event.SelectedValue;
             _targetTime = Convert.ToDateTime(toDoThing.endTime);
             if (_targetTime <= DateTime.Now)
             {
@@ -87,12 +90,9 @@ namespace CountTimer
         {
             select_event.Items.Clear();
             toDoThings = service.GetTodoList();
-            var list = new List<SelectItem>();
-            foreach (var item in toDoThings)
-            {
-                list.Add(new SelectItem(item.toDoInfo, item.Id));
-            }
-            select_event.Items.AddRange(list.ToArray());
+           // var list = new List<SelectItem>();
+            
+            select_event.Items.AddRange([.. toDoThings]);
         }
 
         /// <summary>
