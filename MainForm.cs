@@ -1,5 +1,5 @@
 ﻿using System.Configuration;
-using System.Windows.Forms;
+using System.Diagnostics;
 using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
@@ -18,11 +18,13 @@ namespace CountTimer
         private ToDoThingService service;
         List<ToDoThing> toDoThings;
         private CancellationTokenSource _cts;
+        private Window window;
         public MainForm()
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
             this.TopMost = true;
+            window = this;
             service = new ToDoThingServiceImpl();
             _cts = new CancellationTokenSource();
 
@@ -52,7 +54,9 @@ namespace CountTimer
             _targetTime = Convert.ToDateTime(toDoThing.endTime);
             if (_targetTime <= DateTime.Now)
             {
-                MessageBox.Show("已超时");
+                _timer.Stop();
+                lblCountdown.Text = "事件已结束";
+                //AntdUI.Message.warn(window, "事件结束", autoClose: 2);
                 return;
             }
             _timer.Start();
@@ -66,7 +70,8 @@ namespace CountTimer
             {
                 _timer.Stop();
                 lblCountdown.Text = "时间到！";
-                MessageBox.Show("倒计时结束！");
+                //MessageBox.Show("倒计时结束！");
+                AntdUI.Message.warn(window, select_event.Text+"事件结束", autoClose: 2);
             }
         }
         // 定时器事件
