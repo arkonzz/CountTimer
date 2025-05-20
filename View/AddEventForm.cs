@@ -13,7 +13,7 @@ namespace CountTimer.View
         private Window window;
         private ToDoThing toDoThing;
         public event Action DataUpdated;
-        
+
         public AddEventForm()
         {
             InitializeComponent();
@@ -24,7 +24,7 @@ namespace CountTimer.View
             dp_endtime.MinDate = DateTime.Now;
             dp_endtime.Value = DateTime.Now;
             toDoThing = new ToDoThing();
-            
+
         }
 
         private void btn_close_Click(object sender, EventArgs e)
@@ -34,15 +34,15 @@ namespace CountTimer.View
 
         private void btn_add_Click(object sender, EventArgs e)
         {
-            if (input_info.Text.Trim().Length==0)
+            if (input_info.Text.Trim().Length == 0 || select_regular.SelectedValue == null)
             {
-                AntdUI.Message.warn(window, "请输入内容", autoClose: 3);
+                AntdUI.Message.warn(window, "请补充内容", autoClose: 2);
                 return;
             }
-            toDoThing.toDoInfo=input_info.Text;
-            toDoThing.isMailed=false;
+            toDoThing.toDoInfo = input_info.Text;
+            toDoThing.isMailed = false;
             toDoThing.endTime = dp_endtime.Text;
-            toDoThing.isRegular= select_regular.SelectedIndex==1 ? false : true;
+            toDoThing.isRegular = select_regular.SelectedIndex == 1 ? false : true;
             if (service.AddToDoThing(toDoThing) > 0)
             {
                 AntdUI.Message.success(window, "新增成功", autoClose: 1);
@@ -52,9 +52,10 @@ namespace CountTimer.View
             }
             else
             {
-                AntdUI.Message.error(window, "新增失败", autoClose: 3);
+                AntdUI.Message.error(window, "新增失败", autoClose: 2);
             }
-            
+
         }
+
     }
 }

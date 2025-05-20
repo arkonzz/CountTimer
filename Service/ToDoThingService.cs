@@ -17,7 +17,7 @@ namespace CountTimer.Service
        ToDoThing GetById(int id);
 
         int deleteByTime(DateTime time);
-        int insertRegularEvent();
+        int updateRegularEvent();
 
 
     }

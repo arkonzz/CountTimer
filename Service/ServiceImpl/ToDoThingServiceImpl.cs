@@ -30,14 +30,13 @@ namespace CountTimer.Service.ServiceImpl
         {
            return Db.Deleteable<ToDoThing>().Where(it => Convert.ToDateTime(it.endTime) < time&&it.isRegular==false).ExecuteCommand();
         }
-        public int insertRegularEvent()
+        public int updateRegularEvent()
         {
-            var today = DateTime.Today;
-            var result = Db.Updateable<ToDoThing>()
-                .SetColumns(it => new ToDoThing() { it.endTime = "" })
-                .Where(it => it.isRegular == true)
-                .ExecuteCommand();
-
+            string sql = @"UPDATE to_do_list 
+                  SET end_time = date('now') || ' ' || substr(end_time, 12, 8)
+                  WHERE is_regular = 1";
+            return Db.Ado.ExecuteCommand(sql);
         }
+
     }
 }

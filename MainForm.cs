@@ -14,37 +14,20 @@ namespace CountTimer
         private DateTime _targetTime;
         private readonly Timer _timer = new Timer();
         private bool dispose = false;
-        private DateTime lastTime;
         private AddEventForm addEventForm;
         private ToDoThingService service;
         List<ToDoThing> toDoThings;
         private CancellationTokenSource _cts;
-        private Configuration config;
         public MainForm()
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick; // 确保事件绑定
-            // 获取配置文件
-            config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             this.TopMost = true;
             service = new ToDoThingServiceImpl();
             _cts = new CancellationTokenSource();
-            lastTime  = Convert.ToDateTime(config.AppSettings.Settings["lastStartTime"].Value);
-            if (insertRegular(lastTime))
-            {
-                service.insertRegularEvent();
-            }
+
+            service.updateRegularEvent();
             deleteExpiredEvent();
-            // 修改属性值
-            config.AppSettings.Settings["lastStartTime"].Value = DateTime.Now.ToString();
-            config.Save(ConfigurationSaveMode.Modified);
-            // 刷新配置文件
-            ConfigurationManager.RefreshSection("appSettings");
-        }
-        private bool insertRegular(DateTime targetDate)
-        {
-            double dayDiff = DateTime.Now.Subtract(targetDate).TotalDays;
-            return  Math.Abs(dayDiff) >= 1;
         }
 
         private void deleteExpiredEvent()
