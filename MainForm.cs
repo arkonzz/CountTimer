@@ -17,6 +17,7 @@ namespace CountTimer
         private AddEventForm addEventForm;
         private ToDoThingService service;
         List<ToDoThing> toDoThings;
+        private DateTime lastTime;
         private CancellationTokenSource _cts;
         private Window window;
         public MainForm()
@@ -36,14 +37,28 @@ namespace CountTimer
             Task.Run(async () => {
                 while (!_cts.IsCancellationRequested)
                  {
-                     service.deleteByTime(DateTime.Now);
+                    if (SpanNewDay(lastTime))
+                    {
+                        service.updateRegularEvent();
+                    }
+                    service.deleteByTime(DateTime.Now);
                      select_event.Invoke(() => {
                        initSelectEvent();
                       });
+
+
+                    lastTime = DateTime.Now;
                     await Task.Delay(30 * 1000); // 添加await关键字
                 }
                 
              });
+        }
+
+        private bool SpanNewDay(DateTime lastTime)
+        {
+            DateTime currentDate = DateTime.Today;      // 当前日期
+
+            return currentDate > lastTime.Date;
         }
 
         private void btn_countdown_Click(object sender, EventArgs e)
