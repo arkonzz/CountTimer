@@ -143,6 +143,7 @@
             Name = "AddEventForm";
             StartPosition = FormStartPosition.CenterScreen;
             Text = "新增事件";
+            VisibleChanged += AddEventForm_VisibleChanged;
             panel1.ResumeLayout(false);
             panel2.ResumeLayout(false);
             ResumeLayout(false);

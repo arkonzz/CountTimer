@@ -57,5 +57,10 @@ namespace CountTimer.View
 
         }
 
+        private void AddEventForm_VisibleChanged(object sender, EventArgs e)
+        {
+            dp_endtime.MinDate = DateTime.Now;
+            dp_endtime.Value = DateTime.Now;
+        }
     }
 }

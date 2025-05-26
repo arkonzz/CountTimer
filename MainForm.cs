@@ -20,6 +20,7 @@ namespace CountTimer
         private DateTime lastTime;
         private CancellationTokenSource _cts;
         private Window window;
+        public event Action DataUpdated;
         public MainForm()
         {
             InitializeComponent();
@@ -196,7 +197,6 @@ namespace CountTimer
             }
             addEventForm.DataUpdated += () =>
             {
-                
                 initSelectEvent();
             };
             addEventForm.Show();
