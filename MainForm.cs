@@ -42,9 +42,9 @@ namespace CountTimer
                         service.updateRegularEvent();
                     }
                     service.deleteByTime(DateTime.Now);
-                     select_event.Invoke(() => {
+                    select_event.Invoke(() => {
                        initSelectEvent();
-                      });
+                     });
 
 
                     lastTime = DateTime.Now;

@@ -125,7 +125,7 @@
             // 
             notifyIcon_cd.ContextMenuStrip = contextMenuStrip1;
             notifyIcon_cd.Icon = (Icon)resources.GetObject("notifyIcon_cd.Icon");
-            notifyIcon_cd.Text = "notifyIcon_cd";
+            notifyIcon_cd.Text = "count down";
             notifyIcon_cd.Visible = true;
             notifyIcon_cd.MouseClick += notifyIcon_Click;
             // 
