@@ -33,8 +33,8 @@ namespace CountTimer.Service.ServiceImpl
         public int updateRegularEvent()
         {
             string sql = @"UPDATE to_do_list 
-                  SET end_time = date('now') || ' ' || substr(end_time, 12, 8)
-                  WHERE is_regular = 1";
+            SET end_time = date('now','localtime') || ' ' || time(end_time) 
+            WHERE is_regular = 1";
             return Db.Ado.ExecuteCommand(sql);
         }
 
