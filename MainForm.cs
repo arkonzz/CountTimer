@@ -157,11 +157,14 @@ namespace CountTimer
         //
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (dispose)
+            // 系统关机/重启时不阻止
+            if (e.CloseReason == CloseReason.WindowsShutDown)
             {
-                Application.Exit();
+                return;
             }
-            else
+
+            // 用户主动关闭时隐藏窗口
+            if (!dispose && e.CloseReason == CloseReason.UserClosing)
             {
                 windowDisplay(false);
                 e.Cancel = true;
