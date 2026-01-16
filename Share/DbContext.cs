@@ -19,6 +19,12 @@ namespace CountTimer.Share
 
         public DbContext()
         {
+            // 确保数据库目录存在
+            var dbDirectory = Path.GetDirectoryName(FilePath);
+            if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+            {
+                Directory.CreateDirectory(dbDirectory);
+            }
 
 
             Db = new SqlSugarClient(new ConnectionConfig()
@@ -35,6 +41,10 @@ namespace CountTimer.Share
                     Debug.WriteLine($"执行SQL：{sql}");  //输出原始SQL语句到控制台
                 };
             });
+            // 创建数据库（如果不存在）
+            Db.DbMaintenance.CreateDatabase();
+            // 创建或更新表结构
+            Db.CodeFirst.InitTables<T>();
         }
     }
 }

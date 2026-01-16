@@ -24,46 +24,59 @@
         #region Windows Form Designer generated code
 
         /// <summary>
-        ///  Required method for Designer support - do not modify
-        ///  the contents of this method with the code editor.
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             panel1 = new AntdUI.Panel();
+            btn_del = new AntdUI.Button();
             btn_addEvent = new AntdUI.Button();
             select_event = new AntdUI.Select();
             pageHeader1 = new AntdUI.PageHeader();
             button1 = new AntdUI.Button();
             btn_countdown = new AntdUI.Button();
             lblCountdown = new AntdUI.Label();
-            notifyIcon_cd = new NotifyIcon(components);
-            contextMenuStrip1 = new ContextMenuStrip(components);
-            退出ToolStripMenuItem = new ToolStripMenuItem();
+            notifyIcon_cd = new System.Windows.Forms.NotifyIcon(components);
+            contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(components);
+            退出ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             panel1.SuspendLayout();
             contextMenuStrip1.SuspendLayout();
             SuspendLayout();
             // 
             // panel1
             // 
+            panel1.Controls.Add(btn_del);
             panel1.Controls.Add(btn_addEvent);
             panel1.Controls.Add(select_event);
             panel1.Controls.Add(pageHeader1);
             panel1.Controls.Add(button1);
             panel1.Controls.Add(btn_countdown);
-            panel1.Dock = DockStyle.Top;
-            panel1.Location = new Point(0, 0);
+            panel1.Dock = System.Windows.Forms.DockStyle.Top;
+            panel1.Location = new System.Drawing.Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(472, 81);
+            panel1.Size = new System.Drawing.Size(552, 81);
             panel1.TabIndex = 0;
             panel1.Text = "panel1";
             // 
+            // btn_del
+            // 
+            btn_del.Enabled = false;
+            btn_del.Location = new System.Drawing.Point(474, 32);
+            btn_del.Name = "btn_del";
+            btn_del.Size = new System.Drawing.Size(66, 40);
+            btn_del.TabIndex = 7;
+            btn_del.Text = "删除事件";
+            btn_del.Type = AntdUI.TTypeMini.Error;
+            btn_del.Click += btn_del_Click;
+            // 
             // btn_addEvent
             // 
-            btn_addEvent.Location = new Point(403, 32);
+            btn_addEvent.Location = new System.Drawing.Point(403, 32);
             btn_addEvent.Name = "btn_addEvent";
-            btn_addEvent.Size = new Size(66, 40);
+            btn_addEvent.Size = new System.Drawing.Size(66, 40);
             btn_addEvent.TabIndex = 6;
             btn_addEvent.Text = "新增事件";
             btn_addEvent.Type = AntdUI.TTypeMini.Info;
@@ -72,39 +85,39 @@
             // select_event
             // 
             select_event.List = true;
-            select_event.Location = new Point(12, 32);
+            select_event.Location = new System.Drawing.Point(12, 32);
             select_event.MaxCount = 5;
             select_event.Name = "select_event";
             select_event.PlaceholderText = "请选择事件";
-            select_event.Size = new Size(184, 40);
+            select_event.Size = new System.Drawing.Size(184, 40);
             select_event.TabIndex = 5;
             select_event.SelectedValueChanged += select_event_SelectedValueChanged;
             // 
             // pageHeader1
             // 
-            pageHeader1.Dock = DockStyle.Top;
-            pageHeader1.Location = new Point(0, 0);
+            pageHeader1.Dock = System.Windows.Forms.DockStyle.Top;
+            pageHeader1.Location = new System.Drawing.Point(0, 0);
             pageHeader1.Name = "pageHeader1";
             pageHeader1.ShowButton = true;
-            pageHeader1.Size = new Size(472, 23);
+            pageHeader1.Size = new System.Drawing.Size(552, 23);
             pageHeader1.TabIndex = 4;
             pageHeader1.Text = "倒计时";
             // 
             // button1
             // 
             button1.BorderWidth = 2F;
-            button1.Location = new Point(300, 32);
+            button1.Location = new System.Drawing.Point(300, 32);
             button1.Name = "button1";
-            button1.Size = new Size(97, 40);
+            button1.Size = new System.Drawing.Size(97, 40);
             button1.TabIndex = 3;
             button1.Text = "倒计时暂停";
             button1.Click += button1_Click;
             // 
             // btn_countdown
             // 
-            btn_countdown.Location = new Point(202, 32);
+            btn_countdown.Location = new System.Drawing.Point(202, 32);
             btn_countdown.Name = "btn_countdown";
-            btn_countdown.Size = new Size(97, 40);
+            btn_countdown.Size = new System.Drawing.Size(97, 40);
             btn_countdown.TabIndex = 2;
             btn_countdown.Text = "倒计时开始";
             btn_countdown.Type = AntdUI.TTypeMini.Primary;
@@ -112,50 +125,51 @@
             // 
             // lblCountdown
             // 
-            lblCountdown.Dock = DockStyle.Fill;
-            lblCountdown.Font = new Font("Microsoft YaHei UI", 15F);
-            lblCountdown.Location = new Point(0, 81);
+            lblCountdown.Dock = System.Windows.Forms.DockStyle.Fill;
+            lblCountdown.Font = new System.Drawing.Font("Microsoft YaHei UI", 15F);
+            lblCountdown.Location = new System.Drawing.Point(0, 81);
             lblCountdown.Name = "lblCountdown";
-            lblCountdown.Size = new Size(472, 153);
+            lblCountdown.Size = new System.Drawing.Size(552, 147);
             lblCountdown.TabIndex = 1;
             lblCountdown.Text = "显示时间";
-            lblCountdown.TextAlign = ContentAlignment.MiddleCenter;
+            lblCountdown.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // notifyIcon_cd
             // 
             notifyIcon_cd.ContextMenuStrip = contextMenuStrip1;
-            notifyIcon_cd.Icon = (Icon)resources.GetObject("notifyIcon_cd.Icon");
+            notifyIcon_cd.Icon = ((System.Drawing.Icon)resources.GetObject("notifyIcon_cd.Icon"));
             notifyIcon_cd.Text = "count down";
             notifyIcon_cd.Visible = true;
             notifyIcon_cd.MouseClick += notifyIcon_Click;
             // 
             // contextMenuStrip1
             // 
-            contextMenuStrip1.Items.AddRange(new ToolStripItem[] { 退出ToolStripMenuItem });
+            contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { 退出ToolStripMenuItem });
             contextMenuStrip1.Name = "contextMenuStrip1";
-            contextMenuStrip1.Size = new Size(101, 26);
+            contextMenuStrip1.Size = new System.Drawing.Size(101, 26);
             // 
             // 退出ToolStripMenuItem
             // 
             退出ToolStripMenuItem.Name = "退出ToolStripMenuItem";
-            退出ToolStripMenuItem.Size = new Size(100, 22);
+            退出ToolStripMenuItem.Size = new System.Drawing.Size(100, 22);
             退出ToolStripMenuItem.Text = "退出";
             退出ToolStripMenuItem.Click += exitMenuItem_Click;
             // 
             // MainForm
             // 
-            ClientSize = new Size(472, 234);
+            ClientSize = new System.Drawing.Size(552, 228);
             Controls.Add(lblCountdown);
             Controls.Add(panel1);
-            Icon = (Icon)resources.GetObject("$this.Icon");
-            Name = "MainForm";
-            StartPosition = FormStartPosition.CenterScreen;
+            Icon = ((System.Drawing.Icon)resources.GetObject("$this.Icon"));
+            StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             Text = "MainForm";
             FormClosing += MainForm_FormClosing;
             panel1.ResumeLayout(false);
             contextMenuStrip1.ResumeLayout(false);
             ResumeLayout(false);
         }
+
+        private AntdUI.Button btn_del;
 
         #endregion
 

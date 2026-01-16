@@ -208,7 +208,13 @@ namespace CountTimer
 
         private void select_event_SelectedValueChanged(object sender, ObjectNEventArgs e)
         {
+            btn_del.Enabled = true;
             btn_countdown.PerformClick();
+        }
+
+        private void btn_del_Click(object sender, EventArgs e)
+        {
+            
         }
     }
 }
