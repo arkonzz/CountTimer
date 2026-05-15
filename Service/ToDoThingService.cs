@@ -19,6 +19,8 @@ namespace CountTimer.Service
         int deleteByTime(DateTime time);
         int updateRegularEvent();
 
+        int deleteById(int id);
+
 
     }
 }

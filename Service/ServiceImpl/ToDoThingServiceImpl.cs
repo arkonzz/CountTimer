@@ -38,5 +38,9 @@ namespace CountTimer.Service.ServiceImpl
             return Db.Ado.ExecuteCommand(sql);
         }
 
+        public int deleteById(int id)
+        {
+           return Db.Deleteable<ToDoThing>().In(id).ExecuteCommand();
+        }
     }
 }

@@ -1,5 +1,11 @@
-﻿using System.Configuration;
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
+using System.Drawing;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
@@ -20,7 +26,6 @@ namespace CountTimer
         private DateTime lastTime;
         private CancellationTokenSource _cts;
         private Window window;
-        public event Action DataUpdated;
         public MainForm()
         {
             InitializeComponent();
@@ -96,11 +101,23 @@ namespace CountTimer
         // 定时器事件
         private void Timer_Tick(object sender, EventArgs e) => UpdateCountdown();
         // 格式化时间为 "天:时:分:秒"
-        private static string FormatTimeSpan(TimeSpan ts)
+        private string FormatTimeSpan(TimeSpan ts)
         {
-            return ts.TotalSeconds > 0
-                ? $"{ts.Days:D2} 天 {ts.Hours:D2} 时 {ts.Minutes:D2} 分 {ts.Seconds:D2} 秒"
-                : "00 天 00 时 00 分 00 秒";
+            ToDoThing selectedTodo = (ToDoThing)select_event.SelectedValue;
+            if (selectedTodo.isRegular)
+            {
+                return ts.TotalSeconds > 0
+                    ? $"{ts.Hours:D2} 时 {ts.Minutes:D2} 分 {ts.Seconds:D2} 秒"
+                    : "00 时 00 分 00 秒";
+            }
+            else
+            {
+                return ts.TotalSeconds > 0
+                    ? $"{ts.Days:D2} 天 {ts.Hours:D2} 时 {ts.Minutes:D2} 分 {ts.Seconds:D2} 秒"
+                    : "00 天 00 时 00 分 00 秒";
+            }
+            
+            
         }
         private void initSelectEvent()
         {
@@ -198,13 +215,19 @@ namespace CountTimer
             {
                 addEventForm = new AddEventForm();
             }
-            addEventForm.DataUpdated += () =>
-            {
-                initSelectEvent();
-            };
+            
+            // 先取消订阅，避免重复订阅
+            addEventForm.DataUpdated -= OnDataUpdated;
+            addEventForm.DataUpdated += OnDataUpdated;
+            
             addEventForm.Show();
-
         }
+        
+        private void OnDataUpdated()
+        {
+            initSelectEvent();
+        }
+
 
         private void select_event_SelectedValueChanged(object sender, ObjectNEventArgs e)
         {
@@ -214,7 +237,30 @@ namespace CountTimer
 
         private void btn_del_Click(object sender, EventArgs e)
         {
+            if (select_event.SelectedValue == null)
+            {
+                AntdUI.Message.warn(window, "请先选择要删除的事件", autoClose: 2);
+                return;
+            }
             
+            ToDoThing selectedTodo = (ToDoThing)select_event.SelectedValue;
+            
+            // 使用 Modal.Config 配置对话框
+            var config = new AntdUI.Modal.Config(window, "确认删除", $"确定要删除事件 \"{selectedTodo.toDoInfo}\" 吗？")
+            {
+                OnOk = (cfg) => {
+                    Console.WriteLine("id:"+selectedTodo.Id);
+                    service.deleteById(selectedTodo.Id);
+                    AntdUI.Message.success(window, "删除成功", autoClose: 2);
+                    initSelectEvent();
+                    
+                    // 如果正在倒计时该事件，停止计时
+                    _timer.Stop();
+                    lblCountdown.Text = "事件已删除";
+                    return true; // 返回 true 关闭对话框
+                }
+            };
+            AntdUI.Modal.open(config);
         }
     }
 }
