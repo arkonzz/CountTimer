@@ -20,12 +20,12 @@ namespace CountTimer
         private DateTime _targetTime;
         private readonly Timer _timer = new Timer();
         private bool dispose = false;
-        private AddEventForm addEventForm;
-        private ToDoThingService service;
-        List<ToDoThing> toDoThings;
+        private AddEventForm? addEventForm;
+        private readonly ToDoThingService service;
+        private List<ToDoThing> toDoThings = new List<ToDoThing>();
         private DateTime lastTime;
-        private CancellationTokenSource _cts;
-        private Window window;
+        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private readonly Window window;
         public MainForm()
         {
             InitializeComponent();
@@ -33,31 +33,42 @@ namespace CountTimer
             this.TopMost = true;
             window = this;
             service = new ToDoThingServiceImpl();
-            _cts = new CancellationTokenSource();
+            lastTime = DateTime.Now;
             service.updateRegularEvent();
             deleteExpiredEvent();
         }
 
         private void deleteExpiredEvent()
         {
-            Task.Run(async () => {
-                while (!_cts.IsCancellationRequested)
-                 {
-                    if (SpanNewDay(lastTime))
+            _ = Task.Run(async () => {
+                var cleanupService = new ToDoThingServiceImpl();
+                try
+                {
+                    while (!_cts.IsCancellationRequested)
                     {
-                        service.updateRegularEvent();
+                        if (SpanNewDay(lastTime))
+                        {
+                            cleanupService.updateRegularEvent();
+                        }
+
+                        cleanupService.deleteByTime(DateTime.Now);
+
+                        if (!IsDisposed && select_event.IsHandleCreated)
+                        {
+                            select_event.BeginInvoke((Action)initSelectEvent);
+                        }
+
+                        lastTime = DateTime.Now;
+                        await Task.Delay(TimeSpan.FromSeconds(30), _cts.Token);
                     }
-                    service.deleteByTime(DateTime.Now);
-                    select_event.Invoke(() => {
-                       initSelectEvent();
-                     });
-
-
-                    lastTime = DateTime.Now;
-                    await Task.Delay(30 * 1000); // 添加await关键字
                 }
-                
-             });
+                catch (OperationCanceledException)
+                {
+                }
+                catch (InvalidOperationException)
+                {
+                }
+            }, _cts.Token);
         }
 
         private bool SpanNewDay(DateTime lastTime)
@@ -99,11 +110,15 @@ namespace CountTimer
             }
         }
         // 定时器事件
-        private void Timer_Tick(object sender, EventArgs e) => UpdateCountdown();
+        private void Timer_Tick(object? sender, EventArgs e) => UpdateCountdown();
         // 格式化时间为 "天:时:分:秒"
         private string FormatTimeSpan(TimeSpan ts)
         {
-            ToDoThing selectedTodo = (ToDoThing)select_event.SelectedValue;
+            if (select_event.SelectedValue is not ToDoThing selectedTodo)
+            {
+                return "请选择事件";
+            }
+
             if (selectedTodo.isRegular)
             {
                 return ts.TotalSeconds > 0
@@ -121,11 +136,27 @@ namespace CountTimer
         }
         private void initSelectEvent()
         {
+            int? selectedId = (select_event.SelectedValue as ToDoThing)?.Id;
             select_event.Items.Clear();
             toDoThings = service.GetTodoList();
            // var list = new List<SelectItem>();
             
             select_event.Items.AddRange([.. toDoThings]);
+
+            if (selectedId.HasValue)
+            {
+                int selectedIndex = toDoThings.FindIndex(it => it.Id == selectedId.Value);
+                if (selectedIndex >= 0)
+                {
+                    select_event.SelectedIndex = selectedIndex;
+                    return;
+                }
+
+                btn_del.Enabled = false;
+                btn_edit.Enabled = false;
+                _timer.Stop();
+                lblCountdown.Text = "事件已结束";
+            }
         }
 
         /// <summary>
@@ -193,7 +224,7 @@ namespace CountTimer
             base.OnLoad(e);
 
             // 获取主显示器工作区域（排除任务栏）
-            Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
+            Rectangle workingArea = Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(this);
 
             // 计算右下角坐标
             int x = workingArea.Right - this.Width;
@@ -211,7 +242,7 @@ namespace CountTimer
 
         private void btn_addEvent_Click(object sender, EventArgs e)
         {
-            if (addEventForm == null)
+            if (addEventForm == null || addEventForm.IsDisposed)
             {
                 addEventForm = new AddEventForm();
             }
@@ -219,7 +250,7 @@ namespace CountTimer
             // 先取消订阅，避免重复订阅
             addEventForm.DataUpdated -= OnDataUpdated;
             addEventForm.DataUpdated += OnDataUpdated;
-            
+            addEventForm.PrepareAddEvent();
             addEventForm.Show();
         }
         
@@ -232,6 +263,7 @@ namespace CountTimer
         private void select_event_SelectedValueChanged(object sender, ObjectNEventArgs e)
         {
             btn_del.Enabled = true;
+            btn_edit.Enabled = true;
             btn_countdown.PerformClick();
         }
 
@@ -261,6 +293,34 @@ namespace CountTimer
                 }
             };
             AntdUI.Modal.open(config);
+        }
+
+        private void btn_edit_Click(object sender, EventArgs e)
+        {
+            if (select_event.SelectedValue == null)
+            {
+                AntdUI.Message.warn(window, "请先选择要编辑的事件", autoClose: 2);
+                return;
+            }
+
+            ToDoThing selectedTodo = (ToDoThing)select_event.SelectedValue;
+            if (addEventForm == null || addEventForm.IsDisposed)
+            {
+                addEventForm = new AddEventForm();
+            }
+
+            addEventForm.DataUpdated -= OnDataUpdated;
+            addEventForm.DataUpdated += OnDataUpdated;
+            addEventForm.SetEditEvent(selectedTodo);
+            addEventForm.Show();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            _timer.Dispose();
+            base.OnFormClosed(e);
         }
     }
 }

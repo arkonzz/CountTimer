@@ -21,6 +21,8 @@ namespace CountTimer.Service
 
         int deleteById(int id);
 
+        int UpdateToDoThing(ToDoThing toDoThing);
+
 
     }
 }

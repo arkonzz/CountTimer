@@ -42,5 +42,10 @@ namespace CountTimer.Service.ServiceImpl
         {
            return Db.Deleteable<ToDoThing>().In(id).ExecuteCommand();
         }
+
+        public int UpdateToDoThing(ToDoThing toDoThing)
+        {
+            return Db.Updateable(toDoThing).ExecuteCommand();
+        }
     }
 }

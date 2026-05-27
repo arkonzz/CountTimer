@@ -9,9 +9,9 @@ namespace CountTimer.Model
         [SugarColumn(IsPrimaryKey = true, IsIdentity = true)]
         public int Id { get; set; }
         [SugarColumn(ColumnName = "to_do_info")]
-        public string toDoInfo { get; set; }
+        public string toDoInfo { get; set; } = string.Empty;
         [SugarColumn(ColumnName = "end_time")]
-        public string endTime { get; set; }
+        public string endTime { get; set; } = string.Empty;
         [SugarColumn(ColumnName = "is_mailed")]
         public bool isMailed { get; set; }
         [SugarColumn(ColumnName = "is_regular")]
