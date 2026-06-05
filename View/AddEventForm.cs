@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Configuration;
 using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Model;
@@ -11,6 +10,8 @@ namespace CountTimer.View
 {
     public partial class AddEventForm : Window
     {
+        private const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+
         private readonly ToDoThingService service;
         private readonly Window window;
         private bool _isEditMode;
@@ -40,7 +41,15 @@ namespace CountTimer.View
             _editThing = thing;
             input_info.Text = thing.toDoInfo;
             dp_endtime.MinDate = DateTime.MinValue;
-            dp_endtime.Value = DateTime.Parse(thing.endTime);
+            if (DateTime.TryParse(thing.endTime, out DateTime endTime))
+            {
+                dp_endtime.Value = endTime;
+            }
+            else
+            {
+                dp_endtime.Value = DateTime.Now;
+                AntdUI.Message.warn(window, "事件时间格式异常，请重新选择", autoClose: 2);
+            }
             select_regular.SelectedIndex = thing.isRegular ? 0 : 1;
             btn_add.Text = "保存";
             this.Text = "编辑事件";
@@ -66,11 +75,28 @@ namespace CountTimer.View
 
         private void btn_add_Click(object sender, EventArgs e)
         {
-            if (input_info.Text.Trim().Length == 0 || select_regular.SelectedValue == null)
+            string toDoInfo = input_info.Text.Trim();
+            if (toDoInfo.Length == 0 || select_regular.SelectedIndex < 0)
             {
                 AntdUI.Message.warn(window, "请补充内容", autoClose: 2);
                 return;
             }
+
+            if (!DateTime.TryParse(dp_endtime.Text, out DateTime endTime))
+            {
+                AntdUI.Message.warn(window, "请选择有效时间", autoClose: 2);
+                return;
+            }
+
+            bool isRegular = select_regular.SelectedIndex == 0;
+            if (!isRegular && endTime <= DateTime.Now)
+            {
+                AntdUI.Message.warn(window, "普通事件时间必须晚于当前时间", autoClose: 2);
+                return;
+            }
+
+            endTime = NormalizeEndTime(endTime, isRegular);
+            string endTimeText = endTime.ToString(DateTimeFormat);
 
             if (_isEditMode)
             {
@@ -81,9 +107,9 @@ namespace CountTimer.View
                     return;
                 }
 
-                _editThing.toDoInfo = input_info.Text;
-                _editThing.endTime = dp_endtime.Text;
-                _editThing.isRegular = select_regular.SelectedIndex != 1;
+                _editThing.toDoInfo = toDoInfo;
+                _editThing.endTime = endTimeText;
+                _editThing.isRegular = isRegular;
                 if (service.UpdateToDoThing(_editThing) > 0)
                 {
                     AntdUI.Message.success(window, "修改成功", autoClose: 1);
@@ -100,10 +126,10 @@ namespace CountTimer.View
 
             var toDoThing = new ToDoThing
             {
-                toDoInfo = input_info.Text,
+                toDoInfo = toDoInfo,
                 isMailed = false,
-                endTime = dp_endtime.Text,
-                isRegular = select_regular.SelectedIndex != 1
+                endTime = endTimeText,
+                isRegular = isRegular
             };
 
             if (service.AddToDoThing(toDoThing) > 0)
@@ -118,6 +144,17 @@ namespace CountTimer.View
                 AntdUI.Message.error(window, "新增失败", autoClose: 2);
             }
 
+        }
+
+        private static DateTime NormalizeEndTime(DateTime endTime, bool isRegular)
+        {
+            if (!isRegular || endTime > DateTime.Now)
+            {
+                return endTime;
+            }
+
+            DateTime nextOccurrence = DateTime.Today.Add(endTime.TimeOfDay);
+            return nextOccurrence > DateTime.Now ? nextOccurrence : nextOccurrence.AddDays(1);
         }
 
         private void AddEventForm_VisibleChanged(object sender, EventArgs e)

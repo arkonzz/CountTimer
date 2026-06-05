@@ -2,16 +2,14 @@
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Share;
-using Dm;
-using Dm.util;
-using Microsoft.VisualBasic.ApplicationServices;
 using SqlSugar;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace CountTimer.Service.ServiceImpl
 {
     public class ToDoThingServiceImpl : DbContext<ToDoThing>, ToDoThingService
     {
+        private const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss";
+
         public int AddToDoThing(ToDoThing toDoThing)
         {
            return Db.Insertable(toDoThing).ExecuteCommand();
@@ -19,7 +17,7 @@ namespace CountTimer.Service.ServiceImpl
 
         public List<ToDoThing> GetTodoList()
         {
-            var list = Db.Queryable<ToDoThing>().ToList();
+            var list = Db.Queryable<ToDoThing>().OrderBy(it => it.endTime).ToList();
             return list;
         }
         public ToDoThing GetById(int id) {
@@ -28,13 +26,21 @@ namespace CountTimer.Service.ServiceImpl
 
         public int deleteByTime(DateTime time)
         {
-           return Db.Deleteable<ToDoThing>().Where(it => Convert.ToDateTime(it.endTime) < time&&it.isRegular==false).ExecuteCommand();
+            string endTime = time.ToString(DateTimeFormat);
+            const string sql = @"DELETE FROM to_do_list
+WHERE is_regular = 0 AND datetime(end_time) < datetime(@endTime)";
+
+            return Db.Ado.ExecuteCommand(sql, new SugarParameter("@endTime", endTime));
         }
         public int updateRegularEvent()
         {
-            string sql = @"UPDATE to_do_list 
-            SET end_time = date('now','localtime') || ' ' || time(end_time) 
-            WHERE is_regular = 1";
+            const string sql = @"UPDATE to_do_list
+SET end_time = CASE
+    WHEN time(end_time) <= time('now', 'localtime')
+        THEN datetime(date('now', 'localtime', '+1 day') || ' ' || time(end_time))
+    ELSE datetime(date('now', 'localtime') || ' ' || time(end_time))
+END
+WHERE is_regular = 1 AND datetime(end_time) < datetime('now', 'localtime')";
             return Db.Ado.ExecuteCommand(sql);
         }
 

@@ -1,161 +1,153 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
 using System.Drawing;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Service.ServiceImpl;
 using CountTimer.View;
-using Timer = System.Windows.Forms.Timer;
 
 namespace CountTimer
 {
     public partial class MainForm : Window
     {
-        private DateTime _targetTime;
-        private readonly Timer _timer = new Timer();
-        private bool dispose = false;
+        private readonly CountdownController _countdownController = new CountdownController();
+        private readonly ExpiredEventCleanupWorker _cleanupWorker = new ExpiredEventCleanupWorker();
+        private bool _isExitRequested = false;
+        private bool _isRefreshingEvents = false;
         private AddEventForm? addEventForm;
         private readonly ToDoThingService service;
-        private List<ToDoThing> toDoThings = new List<ToDoThing>();
-        private DateTime lastTime;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private List<ToDoThing> toDoThings = [];
         private readonly Window window;
         public MainForm()
         {
             InitializeComponent();
-            _timer.Tick += Timer_Tick; // 确保事件绑定
+            _countdownController.Tick += CountdownController_Tick;
+            _countdownController.Completed += CountdownController_Completed;
             this.TopMost = true;
             window = this;
             service = new ToDoThingServiceImpl();
-            lastTime = DateTime.Now;
             service.updateRegularEvent();
-            deleteExpiredEvent();
-        }
-
-        private void deleteExpiredEvent()
-        {
-            _ = Task.Run(async () => {
-                var cleanupService = new ToDoThingServiceImpl();
-                try
-                {
-                    while (!_cts.IsCancellationRequested)
-                    {
-                        if (SpanNewDay(lastTime))
-                        {
-                            cleanupService.updateRegularEvent();
-                        }
-
-                        cleanupService.deleteByTime(DateTime.Now);
-
-                        if (!IsDisposed && select_event.IsHandleCreated)
-                        {
-                            select_event.BeginInvoke((Action)initSelectEvent);
-                        }
-
-                        lastTime = DateTime.Now;
-                        await Task.Delay(TimeSpan.FromSeconds(30), _cts.Token);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                }
-                catch (InvalidOperationException)
-                {
-                }
-            }, _cts.Token);
-        }
-
-        private bool SpanNewDay(DateTime lastTime)
-        {
-            DateTime currentDate = DateTime.Today;      // 当前日期
-
-            return currentDate > lastTime.Date;
+            _cleanupWorker.Start(RefreshEventsFromWorker, NotifyRegularEventFromWorker);
         }
 
         private void btn_countdown_Click(object sender, EventArgs e)
         {
-            if(select_event.SelectedValue == null)
+            if (select_event.SelectedValue is not ToDoThing toDoThing)
             {
                 AntdUI.Message.error(window, "请选择事件", autoClose: 2);
                 return;
             }
-            ToDoThing toDoThing = (ToDoThing)select_event.SelectedValue;
-            _targetTime = Convert.ToDateTime(toDoThing.endTime);
-            if (_targetTime <= DateTime.Now)
+
+            if (!_countdownController.Start(toDoThing, out string? errorMessage))
             {
-                _timer.Stop();
-                lblCountdown.Text = "事件已结束";
-                //AntdUI.Message.warn(window, "事件结束", autoClose: 2);
+                lblCountdown.Text = errorMessage ?? "倒计时启动失败";
+                if (errorMessage == "事件时间格式异常")
+                {
+                    AntdUI.Message.error(window, errorMessage, autoClose: 2);
+                }
                 return;
             }
-            _timer.Start();
         }
-        private void UpdateCountdown()
-        {
-            TimeSpan remaining = _targetTime - DateTime.Now;
-            lblCountdown.Text = FormatTimeSpan(remaining);
 
-            if (remaining.TotalSeconds <= 0)
+        private void CountdownController_Tick(TimeSpan remaining, ToDoThing toDoThing)
+        {
+            lblCountdown.Text = CountdownController.FormatTimeSpan(remaining, toDoThing.isRegular);
+        }
+
+        private void CountdownController_Completed(ToDoThing toDoThing)
+        {
+            lblCountdown.Text = "时间到！";
+            AntdUI.Message.warn(window, $"{toDoThing.toDoInfo} 事件结束", autoClose: 2);
+            ShowDesktopNotification(toDoThing.toDoInfo);
+        }
+
+        private void ShowDesktopNotification(string eventName)
+        {
+            notifyIcon_cd.BalloonTipTitle = "倒计时结束";
+            notifyIcon_cd.BalloonTipText = string.IsNullOrWhiteSpace(eventName)
+                ? "时间到！"
+                : $"{eventName} 事件结束";
+            notifyIcon_cd.BalloonTipIcon = ToolTipIcon.Info;
+            notifyIcon_cd.Visible = true;
+            notifyIcon_cd.ShowBalloonTip(5000);
+        }
+
+        private void RefreshEventsFromWorker()
+        {
+            if (IsDisposed || Disposing || !select_event.IsHandleCreated)
             {
-                _timer.Stop();
-                lblCountdown.Text = "时间到！";
-                //MessageBox.Show("倒计时结束！");
-                AntdUI.Message.warn(window, select_event.Text+"事件结束", autoClose: 2);
+                return;
+            }
+
+            try
+            {
+                select_event.BeginInvoke((Action)InitSelectEvent);
+            }
+            catch (InvalidOperationException)
+            {
             }
         }
-        // 定时器事件
-        private void Timer_Tick(object? sender, EventArgs e) => UpdateCountdown();
-        // 格式化时间为 "天:时:分:秒"
-        private string FormatTimeSpan(TimeSpan ts)
+
+        private void NotifyRegularEventFromWorker(ToDoThing toDoThing)
         {
-            if (select_event.SelectedValue is not ToDoThing selectedTodo)
+            if (IsDisposed || Disposing || !IsHandleCreated)
             {
-                return "请选择事件";
+                return;
             }
 
-            if (selectedTodo.isRegular)
+            try
             {
-                return ts.TotalSeconds > 0
-                    ? $"{ts.Hours:D2} 时 {ts.Minutes:D2} 分 {ts.Seconds:D2} 秒"
-                    : "00 时 00 分 00 秒";
-            }
-            else
-            {
-                return ts.TotalSeconds > 0
-                    ? $"{ts.Days:D2} 天 {ts.Hours:D2} 时 {ts.Minutes:D2} 分 {ts.Seconds:D2} 秒"
-                    : "00 天 00 时 00 分 00 秒";
-            }
-            
-            
-        }
-        private void initSelectEvent()
-        {
-            int? selectedId = (select_event.SelectedValue as ToDoThing)?.Id;
-            select_event.Items.Clear();
-            toDoThings = service.GetTodoList();
-           // var list = new List<SelectItem>();
-            
-            select_event.Items.AddRange([.. toDoThings]);
-
-            if (selectedId.HasValue)
-            {
-                int selectedIndex = toDoThings.FindIndex(it => it.Id == selectedId.Value);
-                if (selectedIndex >= 0)
+                BeginInvoke((Action)(() =>
                 {
-                    select_event.SelectedIndex = selectedIndex;
+                    AntdUI.Message.warn(window, $"{toDoThing.toDoInfo} 事件结束", autoClose: 2);
+                    ShowDesktopNotification(toDoThing.toDoInfo);
+                }));
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        private void InitSelectEvent()
+        {
+            _isRefreshingEvents = true;
+            try
+            {
+                int? selectedId = (select_event.SelectedValue as ToDoThing)?.Id;
+                select_event.Items.Clear();
+                toDoThings = service.GetTodoList();
+
+                select_event.Items.AddRange([.. toDoThings]);
+
+                if (toDoThings.Count == 0)
+                {
+                    btn_del.Enabled = false;
+                    btn_edit.Enabled = false;
+                    _countdownController.Stop();
+                    lblCountdown.Text = "暂无事件";
                     return;
                 }
 
-                btn_del.Enabled = false;
-                btn_edit.Enabled = false;
-                _timer.Stop();
-                lblCountdown.Text = "事件已结束";
+                if (selectedId.HasValue)
+                {
+                    int selectedIndex = toDoThings.FindIndex(it => it.Id == selectedId.Value);
+                    if (selectedIndex >= 0)
+                    {
+                        select_event.SelectedIndex = selectedIndex;
+                        return;
+                    }
+
+                    btn_del.Enabled = false;
+                    btn_edit.Enabled = false;
+                    _countdownController.Stop();
+                    lblCountdown.Text = "事件已结束";
+                }
+            }
+            finally
+            {
+                _isRefreshingEvents = false;
             }
         }
 
@@ -187,7 +179,7 @@ namespace CountTimer
         // 在托盘图标右键点菜单“退出”时退出程序
         private void exitMenuItem_Click(object sender, EventArgs e)
         {
-            dispose = true;
+            _isExitRequested = true;
             Application.Exit();
         }
 
@@ -212,7 +204,7 @@ namespace CountTimer
             }
 
             // 用户主动关闭时隐藏窗口
-            if (!dispose && e.CloseReason == CloseReason.UserClosing)
+            if (!_isExitRequested && e.CloseReason == CloseReason.UserClosing)
             {
                 windowDisplay(false);
                 e.Cancel = true;
@@ -222,6 +214,7 @@ namespace CountTimer
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            InitSelectEvent();
 
             // 获取主显示器工作区域（排除任务栏）
             Rectangle workingArea = Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(this);
@@ -237,7 +230,7 @@ namespace CountTimer
 
         private void button1_Click(object sender, EventArgs e)
         {
-            _timer.Stop();
+            _countdownController.Stop();
         }
 
         private void btn_addEvent_Click(object sender, EventArgs e)
@@ -256,12 +249,26 @@ namespace CountTimer
         
         private void OnDataUpdated()
         {
-            initSelectEvent();
+            InitSelectEvent();
+            _cleanupWorker.Wake();
         }
 
 
         private void select_event_SelectedValueChanged(object sender, ObjectNEventArgs e)
         {
+            if (_isRefreshingEvents)
+            {
+                return;
+            }
+
+            if (select_event.SelectedValue is not ToDoThing)
+            {
+                btn_del.Enabled = false;
+                btn_edit.Enabled = false;
+                _countdownController.Stop();
+                return;
+            }
+
             btn_del.Enabled = true;
             btn_edit.Enabled = true;
             btn_countdown.PerformClick();
@@ -281,13 +288,12 @@ namespace CountTimer
             var config = new AntdUI.Modal.Config(window, "确认删除", $"确定要删除事件 \"{selectedTodo.toDoInfo}\" 吗？")
             {
                 OnOk = (cfg) => {
-                    Console.WriteLine("id:"+selectedTodo.Id);
                     service.deleteById(selectedTodo.Id);
                     AntdUI.Message.success(window, "删除成功", autoClose: 2);
-                    initSelectEvent();
+                    InitSelectEvent();
                     
                     // 如果正在倒计时该事件，停止计时
-                    _timer.Stop();
+                    _countdownController.Stop();
                     lblCountdown.Text = "事件已删除";
                     return true; // 返回 true 关闭对话框
                 }
@@ -317,9 +323,9 @@ namespace CountTimer
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _cts.Cancel();
-            _cts.Dispose();
-            _timer.Dispose();
+            _cleanupWorker.Dispose();
+            _countdownController.Dispose();
+            notifyIcon_cd.Visible = false;
             base.OnFormClosed(e);
         }
     }

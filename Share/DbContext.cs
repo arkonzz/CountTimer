@@ -1,20 +1,17 @@
 ﻿using SqlSugar;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO;
 
 namespace CountTimer.Share
 {
     public class DbContext<T> where T : class, new()
     {
-        private readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "Db", "ToDoDb.db");
+        private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "Db", "ToDoDb.db");
 
         //注意：不能写成静态的
-        public SqlSugarClient Db;//用来处理事务多表查询和复杂的操作
-        public SimpleClient<T> CurrentDb { get { return new SimpleClient<T>(Db); } }//用来操作当前表的数据
+        public SqlSugarClient Db { get; }//用来处理事务多表查询和复杂的操作
+        public SimpleClient<T> CurrentDb => new SimpleClient<T>(Db);//用来操作当前表的数据
 
 
         public DbContext()
