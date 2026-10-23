@@ -10,7 +10,7 @@ namespace CountTimer.Service
     {
         int AddMemoRecord(MemoRecord record);
 
-        List<MemoRecord> GetMemoList();
+        List<MemoRecord> GetMemoList(DateTime? date = null);
 
         int DeleteMemoById(int id);
 
@@ -26,9 +26,18 @@ namespace CountTimer.Service
             return Db.Insertable(record).ExecuteCommand();
         }
 
-        public List<MemoRecord> GetMemoList()
+        /// <summary>获取记录流水；传 date 只取当天，null 取全部</summary>
+        public List<MemoRecord> GetMemoList(DateTime? date = null)
         {
-            return Db.Queryable<MemoRecord>()
+            var query = Db.Queryable<MemoRecord>();
+            if (date.HasValue)
+            {
+                // recordTime 按 "yyyy-MM-dd HH:mm:ss" 文本存储，用日期前缀过滤
+                string prefix = date.Value.ToString("yyyy-MM-dd");
+                query = query.Where(it => it.recordTime.StartsWith(prefix));
+            }
+
+            return query
                 .OrderBy(it => it.recordTime, OrderByType.Desc)
                 .OrderBy(it => it.Id, OrderByType.Desc)
                 .ToList();
