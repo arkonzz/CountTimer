@@ -1,154 +1,82 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using AntdUI;
-using CountTimer.Model;
 using CountTimer.Service;
-using CountTimer.Service.ServiceImpl;
 using CountTimer.View;
 
 namespace CountTimer
 {
-    public partial class MainForm : Window
+    public partial class MainForm : Window, AntdUI.IEventListener
     {
-        private readonly CountdownController _countdownController = new CountdownController();
-        private readonly ExpiredEventCleanupWorker _cleanupWorker = new ExpiredEventCleanupWorker();
         private bool _isExitRequested = false;
-        private bool _isRefreshingEvents = false;
-        private AddEventForm? addEventForm;
-        private readonly ToDoThingService service;
-        private List<ToDoThing> toDoThings = [];
-        private readonly Window window;
+        private readonly AppSettingsService settingsService = new AppSettingsService();
+        private PomodoroControl? pomodoroControl;
+        private MemoControl? memoControl;
+
         public MainForm()
         {
+            // 尽早应用已保存的主题，避免启动时闪白（AntdUI 控件与自绘控件均跟随此配置）
+            bool darkMode = settingsService.Load().DarkMode;
+            AntdUI.Config.Mode = darkMode ? TMode.Dark : TMode.Light;
+
             InitializeComponent();
-            _countdownController.Tick += CountdownController_Tick;
-            _countdownController.Completed += CountdownController_Completed;
             this.TopMost = true;
-            window = this;
-            service = new ToDoThingServiceImpl();
-            service.updateRegularEvent();
-            _cleanupWorker.Start(RefreshEventsFromWorker, NotifyRegularEventFromWorker);
+
+            pomodoroControl = new PomodoroControl(ShowBalloon);
+            memoControl = new MemoControl();
+            // 番茄钟页的主题开关 → 全局应用（EventHub 广播，所有 AntdUI 控件和自绘监听者自动换色）
+            pomodoroControl.ThemeChanged += dark => AntdUI.Config.Mode = dark ? TMode.Dark : TMode.Light;
+
+            tabPomodoro.Controls.Add(pomodoroControl);
+            tabMemo.Controls.Add(memoControl);
+
+            ApplyContainerTheme();
+            this.AddListener();
         }
 
-        private void btn_countdown_Click(object sender, EventArgs e)
+        /// <summary>
+        /// AntdUI 1.9 的 Config.Mode 只主题化 AntdUI 自绘控件，
+        /// 窗体/Tabs 页/PageHeader 是普通 WinForms 表面，背景需按色板显式设置
+        /// </summary>
+        private void ApplyContainerTheme()
         {
-            if (select_event.SelectedValue is not ToDoThing toDoThing)
+            Color bgColor = AntdUI.Colour.BgLayout.Get();
+            BackColor = bgColor;
+            pageHeader1.BackColor = bgColor;
+            tabPomodoro.BackColor = bgColor;
+            tabMemo.BackColor = bgColor;
+            // 系统标题栏沉浸式暗色（Dark 属性由 AntdUI 内部处理）
+            Dark = AntdUI.Config.Mode == TMode.Dark;
+            Invalidate(true);
+        }
+
+        public void HandleEvent(AntdUI.EventType id, object? tag)
+        {
+            if (id == AntdUI.EventType.THEME)
             {
-                AntdUI.Message.error(window, "请选择事件", autoClose: 2);
-                return;
-            }
-
-            if (!_countdownController.Start(toDoThing, out string? errorMessage))
-            {
-                lblCountdown.Text = errorMessage ?? "倒计时启动失败";
-                if (errorMessage == "事件时间格式异常")
-                {
-                    AntdUI.Message.error(window, errorMessage, autoClose: 2);
-                }
-                return;
+                ApplyContainerTheme();
             }
         }
 
-        private void CountdownController_Tick(TimeSpan remaining, ToDoThing toDoThing)
+        event EventHandler? AntdUI.IEventListener.Disposed
         {
-            lblCountdown.Text = CountdownController.FormatTimeSpan(remaining, toDoThing.isRegular);
+            add => Disposed += value;
+            remove => Disposed -= value;
         }
 
-        private void CountdownController_Completed(ToDoThing toDoThing)
-        {
-            lblCountdown.Text = "时间到！";
-            AntdUI.Message.warn(window, $"{toDoThing.toDoInfo} 事件结束", autoClose: 2);
-            ShowDesktopNotification(toDoThing.toDoInfo);
-        }
+        int AntdUI.IEventListener.GetHashCode() => base.GetHashCode();
 
-        private void ShowDesktopNotification(string eventName)
+        /// <summary>
+        /// 统一的托盘气泡通知入口
+        /// </summary>
+        public void ShowBalloon(string title, string text)
         {
-            notifyIcon_cd.BalloonTipTitle = "倒计时结束";
-            notifyIcon_cd.BalloonTipText = string.IsNullOrWhiteSpace(eventName)
-                ? "时间到！"
-                : $"{eventName} 事件结束";
+            notifyIcon_cd.BalloonTipTitle = title;
+            notifyIcon_cd.BalloonTipText = text;
             notifyIcon_cd.BalloonTipIcon = ToolTipIcon.Info;
             notifyIcon_cd.Visible = true;
             notifyIcon_cd.ShowBalloonTip(5000);
-        }
-
-        private void RefreshEventsFromWorker()
-        {
-            if (IsDisposed || Disposing || !select_event.IsHandleCreated)
-            {
-                return;
-            }
-
-            try
-            {
-                select_event.BeginInvoke((Action)InitSelectEvent);
-            }
-            catch (InvalidOperationException)
-            {
-            }
-        }
-
-        private void NotifyRegularEventFromWorker(ToDoThing toDoThing)
-        {
-            if (IsDisposed || Disposing || !IsHandleCreated)
-            {
-                return;
-            }
-
-            try
-            {
-                BeginInvoke((Action)(() =>
-                {
-                    AntdUI.Message.warn(window, $"{toDoThing.toDoInfo} 事件结束", autoClose: 2);
-                    ShowDesktopNotification(toDoThing.toDoInfo);
-                }));
-            }
-            catch (InvalidOperationException)
-            {
-            }
-        }
-
-        private void InitSelectEvent()
-        {
-            _isRefreshingEvents = true;
-            try
-            {
-                int? selectedId = (select_event.SelectedValue as ToDoThing)?.Id;
-                select_event.Items.Clear();
-                toDoThings = service.GetTodoList();
-
-                select_event.Items.AddRange([.. toDoThings]);
-
-                if (toDoThings.Count == 0)
-                {
-                    btn_del.Enabled = false;
-                    btn_edit.Enabled = false;
-                    _countdownController.Stop();
-                    lblCountdown.Text = "暂无事件";
-                    return;
-                }
-
-                if (selectedId.HasValue)
-                {
-                    int selectedIndex = toDoThings.FindIndex(it => it.Id == selectedId.Value);
-                    if (selectedIndex >= 0)
-                    {
-                        select_event.SelectedIndex = selectedIndex;
-                        return;
-                    }
-
-                    btn_del.Enabled = false;
-                    btn_edit.Enabled = false;
-                    _countdownController.Stop();
-                    lblCountdown.Text = "事件已结束";
-                }
-            }
-            finally
-            {
-                _isRefreshingEvents = false;
-            }
         }
 
         /// <summary>
@@ -170,7 +98,7 @@ namespace CountTimer
 
         }
 
-        // 在托盘图标右键点菜单“显示界面”时显示窗体
+        // 在托盘图标右键点菜单“显示主界面”时显示窗体
         private void showWindowMenuItem_Click(object sender, EventArgs e)
         {
             windowDisplay(true);
@@ -186,15 +114,12 @@ namespace CountTimer
         // 点击托盘图标显示出窗体
         private void notifyIcon_Click(object sender, MouseEventArgs e)
         {
-            // 需要将事件转换成鼠标事件
-            MouseEventArgs mouseEvent = (MouseEventArgs)e;
-            if (mouseEvent.Button == MouseButtons.Left) // 点击左键才弹出
+            if (e.Button == MouseButtons.Left) // 点击左键才弹出
             {
                 windowDisplay(true);
             }
         }
 
-        //
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             // 系统关机/重启时不阻止
@@ -211,10 +136,10 @@ namespace CountTimer
             }
 
         }
+
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            InitSelectEvent();
 
             // 获取主显示器工作区域（排除任务栏）
             Rectangle workingArea = Screen.PrimaryScreen?.WorkingArea ?? Screen.GetWorkingArea(this);
@@ -226,105 +151,56 @@ namespace CountTimer
             // 设置窗体位置
             this.StartPosition = FormStartPosition.Manual;
             this.Location = new Point(x, y);
+
+            // E2E 自测模式：CT_E2E=1 时自动回归"开始计时→切页签→计时存活"
+            if (Environment.GetEnvironmentVariable("CT_E2E") == "1")
+            {
+                _ = RunE2eSelfTest();
+            }
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private async System.Threading.Tasks.Task RunE2eSelfTest()
         {
-            _countdownController.Stop();
-        }
+            string logPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ct_e2e_result.log");
+            System.IO.File.WriteAllText(logPath, $"[{DateTime.Now:HH:mm:ss}] e2e begin\n");
+            await System.Threading.Tasks.Task.Delay(1200);
+            System.IO.File.AppendAllText(logPath, $"initial running={pomodoroControl?.E2EIsRunning}\n");
 
-        private void btn_addEvent_Click(object sender, EventArgs e)
-        {
-            if (addEventForm == null || addEventForm.IsDisposed)
-            {
-                addEventForm = new AddEventForm();
-            }
-            
-            // 先取消订阅，避免重复订阅
-            addEventForm.DataUpdated -= OnDataUpdated;
-            addEventForm.DataUpdated += OnDataUpdated;
-            addEventForm.PrepareAddEvent();
-            addEventForm.Show();
-        }
-        
-        private void OnDataUpdated()
-        {
-            InitSelectEvent();
-            _cleanupWorker.Wake();
-        }
+            pomodoroControl?.E2EStart();
+            await System.Threading.Tasks.Task.Delay(1200);
+            System.IO.File.AppendAllText(logPath, $"after start running={pomodoroControl?.E2EIsRunning} (expect True)\n");
 
+            tabs.SelectedIndex = 1;
+            await System.Threading.Tasks.Task.Delay(1200);
+            System.IO.File.AppendAllText(logPath, $"after tab2 running={pomodoroControl?.E2EIsRunning} (expect True)\n");
 
-        private void select_event_SelectedValueChanged(object sender, ObjectNEventArgs e)
-        {
-            if (_isRefreshingEvents)
-            {
-                return;
-            }
+            tabs.SelectedIndex = 0;
+            await System.Threading.Tasks.Task.Delay(1200);
+            System.IO.File.AppendAllText(logPath, $"after tab1 running={pomodoroControl?.E2EIsRunning} (expect True)\n");
 
-            if (select_event.SelectedValue is not ToDoThing)
-            {
-                btn_del.Enabled = false;
-                btn_edit.Enabled = false;
-                _countdownController.Stop();
-                return;
-            }
+            // 圆环必须是正方形（防字体自动缩放压扁）
+            var ringSize = pomodoroControl?.E2ERingSize ?? System.Drawing.Size.Empty;
+            System.IO.File.AppendAllText(logPath, $"ring size: {ringSize.Width}x{ringSize.Height} (expect Width==Height)\n");
 
-            btn_del.Enabled = true;
-            btn_edit.Enabled = true;
-            btn_countdown.PerformClick();
-        }
+            // 事件编辑抽屉：打开 → 出现新窗体 → 关闭 → 窗体消失
+            int formsBefore = Application.OpenForms.Count;
+            pomodoroControl?.E2EOpenDrawer();
+            await System.Threading.Tasks.Task.Delay(1500);
+            int formsDuring = Application.OpenForms.Count;
+            pomodoroControl?.E2ECloseDrawer();
+            await System.Threading.Tasks.Task.Delay(800);
+            int formsAfter = Application.OpenForms.Count;
+            System.IO.File.AppendAllText(logPath, $"drawer forms before={formsBefore} during={formsDuring} after800ms={formsAfter}\n");
 
-        private void btn_del_Click(object sender, EventArgs e)
-        {
-            if (select_event.SelectedValue == null)
-            {
-                AntdUI.Message.warn(window, "请先选择要删除的事件", autoClose: 2);
-                return;
-            }
-            
-            ToDoThing selectedTodo = (ToDoThing)select_event.SelectedValue;
-            
-            // 使用 Modal.Config 配置对话框
-            var config = new AntdUI.Modal.Config(window, "确认删除", $"确定要删除事件 \"{selectedTodo.toDoInfo}\" 吗？")
-            {
-                OnOk = (cfg) => {
-                    service.deleteById(selectedTodo.Id);
-                    AntdUI.Message.success(window, "删除成功", autoClose: 2);
-                    InitSelectEvent();
-                    
-                    // 如果正在倒计时该事件，停止计时
-                    _countdownController.Stop();
-                    lblCountdown.Text = "事件已删除";
-                    return true; // 返回 true 关闭对话框
-                }
-            };
-            AntdUI.Modal.open(config);
-        }
-
-        private void btn_edit_Click(object sender, EventArgs e)
-        {
-            if (select_event.SelectedValue == null)
-            {
-                AntdUI.Message.warn(window, "请先选择要编辑的事件", autoClose: 2);
-                return;
-            }
-
-            ToDoThing selectedTodo = (ToDoThing)select_event.SelectedValue;
-            if (addEventForm == null || addEventForm.IsDisposed)
-            {
-                addEventForm = new AddEventForm();
-            }
-
-            addEventForm.DataUpdated -= OnDataUpdated;
-            addEventForm.DataUpdated += OnDataUpdated;
-            addEventForm.SetEditEvent(selectedTodo);
-            addEventForm.Show();
+            // 二次确认：再等 2.5 秒（阴影/遮罩层异步回收），并记录剩余窗体类型
+            await System.Threading.Tasks.Task.Delay(2500);
+            var remain = Application.OpenForms.Cast<Form>().Select(f => $"{f.GetType().Name}(visible={f.Visible})").ToArray();
+            System.IO.File.AppendAllText(logPath, $"after3300ms count={remain.Length}: {string.Join(", ", remain)}\n");
+            System.IO.File.AppendAllText(logPath, "e2e done\n");
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            _cleanupWorker.Dispose();
-            _countdownController.Dispose();
             notifyIcon_cd.Visible = false;
             base.OnFormClosed(e);
         }

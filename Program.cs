@@ -17,12 +17,14 @@ namespace CountTimer
                 Application.SetCompatibleTextRenderingDefault(false);
                 ApplicationConfiguration.Initialize();
                 AntdUI.Config.ShowInWindow = true;
+                // 全局主色定为番茄红，与番茄钟专注色一致
+                AntdUI.Style.SetPrimary(System.Drawing.Color.FromArgb(228, 88, 53));
                 Application.Run(new MainForm());
                 mutex.ReleaseMutex();
             }
             else
             {
-                MessageBox.Show("����������", "��ʾ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("程序已在运行中", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

@@ -5,7 +5,6 @@ namespace CountTimer
     partial class MainForm
     {
         /// <summary>
-        /// <summary>
         ///  Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
@@ -13,7 +12,7 @@ namespace CountTimer
         /// <summary>
         ///  Clean up any resources being used.
         /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        /// <param name="disposing">true if managed resources should be used; false, and nothing should be disposed.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -26,178 +25,115 @@ namespace CountTimer
         #region Windows Form Designer generated code
 
         /// <summary>
-        /// Required method for Designer support - do not modify
+        /// Required for Designer support - do not modify
         /// the contents of this method with the code editor.
         /// </summary>
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
-            panel1 = new AntdUI.Panel();
-            btn_del = new AntdUI.Button();
-            btn_edit = new AntdUI.Button();
-            btn_addEvent = new AntdUI.Button();
-            select_event = new AntdUI.Select();
             pageHeader1 = new AntdUI.PageHeader();
-            button1 = new AntdUI.Button();
-            btn_countdown = new AntdUI.Button();
-            lblCountdown = new AntdUI.Label();
+            tabs = new AntdUI.Tabs();
+            tabPomodoro = new AntdUI.TabPage();
+            tabMemo = new AntdUI.TabPage();
             notifyIcon_cd = new System.Windows.Forms.NotifyIcon(components);
             contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(components);
-            退出ToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            panel1.SuspendLayout();
-            contextMenuStrip1.SuspendLayout();
+            showWindowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             SuspendLayout();
-            // 
-            // panel1
-            // 
-            panel1.Controls.Add(btn_del);
-            panel1.Controls.Add(btn_edit);
-            panel1.Controls.Add(btn_addEvent);
-            panel1.Controls.Add(select_event);
-            panel1.Controls.Add(pageHeader1);
-            panel1.Controls.Add(button1);
-            panel1.Controls.Add(btn_countdown);
-            panel1.Dock = System.Windows.Forms.DockStyle.Top;
-            panel1.Location = new System.Drawing.Point(0, 0);
-            panel1.Name = "panel1";
-            panel1.Size = new System.Drawing.Size(620, 81);
-            panel1.TabIndex = 0;
-            panel1.Text = "panel1";
-            // 
-            // btn_del
-            // 
-            btn_del.Enabled = false;
-            btn_del.Location = new System.Drawing.Point(522, 32);
-            btn_del.Name = "btn_del";
-            btn_del.Size = new System.Drawing.Size(66, 40);
-            btn_del.TabIndex = 8;
-            btn_del.Text = "删除事件";
-            btn_del.Type = AntdUI.TTypeMini.Error;
-            btn_del.Click += btn_del_Click;
+            contextMenuStrip1.SuspendLayout();
             //
-            // btn_edit
-            //
-            btn_edit.Enabled = false;
-            btn_edit.Location = new System.Drawing.Point(452, 32);
-            btn_edit.Name = "btn_edit";
-            btn_edit.Size = new System.Drawing.Size(66, 40);
-            btn_edit.TabIndex = 7;
-            btn_edit.Text = "编辑事件";
-            btn_edit.Type = AntdUI.TTypeMini.Success;
-            btn_edit.Click += btn_edit_Click;
-            //c
-            // btn_addEvent
-            //
-            btn_addEvent.Location = new System.Drawing.Point(382, 32);
-            btn_addEvent.Name = "btn_addEvent";
-            btn_addEvent.Size = new System.Drawing.Size(66, 40);
-            btn_addEvent.TabIndex = 6;
-            btn_addEvent.Text = "新增事件";
-            btn_addEvent.Type = AntdUI.TTypeMini.Info;
-            btn_addEvent.Click += btn_addEvent_Click;
-            // 
-            // select_event
-            // 
-            select_event.List = true;
-            select_event.Location = new System.Drawing.Point(12, 32);
-            select_event.MaxCount = 5;
-            select_event.Name = "select_event";
-            select_event.PlaceholderText = "请选择事件";
-            select_event.Size = new System.Drawing.Size(184, 40);
-            select_event.TabIndex = 5;
-            select_event.SelectedValueChanged += select_event_SelectedValueChanged;
-            // 
             // pageHeader1
-            // 
+            //
             pageHeader1.Dock = System.Windows.Forms.DockStyle.Top;
             pageHeader1.Location = new System.Drawing.Point(0, 0);
             pageHeader1.Name = "pageHeader1";
             pageHeader1.ShowButton = true;
-            pageHeader1.Size = new System.Drawing.Size(620, 23);
-            pageHeader1.TabIndex = 4;
-            pageHeader1.Text = "倒计时";
+            pageHeader1.Size = new System.Drawing.Size(660, 40);
+            pageHeader1.TabIndex = 0;
+            pageHeader1.Text = "番茄倒计时";
             //
-            // button1
+            // tabs
             //
-            button1.BorderWidth = 2F;
-            button1.Location = new System.Drawing.Point(292, 32);
-            button1.Name = "button1";
-            button1.Size = new System.Drawing.Size(85, 40);
-            button1.TabIndex = 3;
-            button1.Text = "倒计时暂停";
-            button1.Click += button1_Click;
+            tabs.Dock = System.Windows.Forms.DockStyle.Fill;
+            tabs.Location = new System.Drawing.Point(0, 40);
+            tabs.Name = "tabs";
+            tabs.Size = new System.Drawing.Size(660, 620);
+            tabs.TabIndex = 1;
+            tabs.Pages.Add(tabPomodoro);
+            tabs.Pages.Add(tabMemo);
             //
-            // btn_countdown
+            // tabPomodoro
             //
-            btn_countdown.Location = new System.Drawing.Point(202, 32);
-            btn_countdown.Name = "btn_countdown";
-            btn_countdown.Size = new System.Drawing.Size(85, 40);
-            btn_countdown.TabIndex = 2;
-            btn_countdown.Text = "倒计时开始";
-            btn_countdown.Type = AntdUI.TTypeMini.Primary;
-            btn_countdown.Click += btn_countdown_Click;
-            // 
-            // lblCountdown
-            // 
-            lblCountdown.Dock = System.Windows.Forms.DockStyle.Fill;
-            lblCountdown.Font = new System.Drawing.Font("Microsoft YaHei UI", 15F);
-            lblCountdown.Location = new System.Drawing.Point(0, 81);
-            lblCountdown.Name = "lblCountdown";
-            lblCountdown.Size = new System.Drawing.Size(620, 147);
-            lblCountdown.TabIndex = 1;
-            lblCountdown.Text = "显示时间";
-            lblCountdown.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            // 
+            tabPomodoro.Location = new System.Drawing.Point(0, 40);
+            tabPomodoro.Name = "tabPomodoro";
+            tabPomodoro.Padding = new System.Windows.Forms.Padding(3);
+            tabPomodoro.Size = new System.Drawing.Size(656, 576);
+            tabPomodoro.TabIndex = 0;
+            tabPomodoro.Text = "番茄钟";
+            tabPomodoro.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"10\" y1=\"2\" x2=\"14\" y2=\"2\"/><line x1=\"12\" y1=\"14\" x2=\"15\" y2=\"11\"/><circle cx=\"12\" cy=\"14\" r=\"8\"/></svg>";
+            //
+            // tabMemo
+            //
+            tabMemo.Location = new System.Drawing.Point(0, 40);
+            tabMemo.Name = "tabMemo";
+            tabMemo.Padding = new System.Windows.Forms.Padding(3);
+            tabMemo.Size = new System.Drawing.Size(676, 640);
+            tabMemo.TabIndex = 1;
+            tabMemo.Text = "小计";
+            tabMemo.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"8\" y1=\"6\" x2=\"21\" y2=\"6\"/><line x1=\"8\" y1=\"12\" x2=\"21\" y2=\"12\"/><line x1=\"8\" y1=\"18\" x2=\"21\" y2=\"18\"/><line x1=\"3\" y1=\"6\" x2=\"3.01\" y2=\"6\"/><line x1=\"3\" y1=\"12\" x2=\"3.01\" y2=\"12\"/><line x1=\"3\" y1=\"18\" x2=\"3.01\" y2=\"18\"/></svg>";
+            //
             // notifyIcon_cd
-            // 
+            //
             notifyIcon_cd.ContextMenuStrip = contextMenuStrip1;
             notifyIcon_cd.Icon = ((System.Drawing.Icon)resources.GetObject("notifyIcon_cd.Icon"));
-            notifyIcon_cd.Text = "count down";
+            notifyIcon_cd.Text = "番茄倒计时";
             notifyIcon_cd.Visible = true;
             notifyIcon_cd.MouseClick += notifyIcon_Click;
-            // 
+            //
             // contextMenuStrip1
-            // 
-            contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { 退出ToolStripMenuItem });
+            //
+            contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] { showWindowToolStripMenuItem, exitToolStripMenuItem });
             contextMenuStrip1.Name = "contextMenuStrip1";
-            contextMenuStrip1.Size = new System.Drawing.Size(101, 26);
-            // 
-            // 退出ToolStripMenuItem
-            // 
-            退出ToolStripMenuItem.Name = "退出ToolStripMenuItem";
-            退出ToolStripMenuItem.Size = new System.Drawing.Size(100, 22);
-            退出ToolStripMenuItem.Text = "退出";
-            退出ToolStripMenuItem.Click += exitMenuItem_Click;
-            // 
+            contextMenuStrip1.Size = new System.Drawing.Size(137, 48);
+            //
+            // showWindowToolStripMenuItem
+            //
+            showWindowToolStripMenuItem.Name = "showWindowToolStripMenuItem";
+            showWindowToolStripMenuItem.Size = new System.Drawing.Size(136, 22);
+            showWindowToolStripMenuItem.Text = "显示主界面";
+            showWindowToolStripMenuItem.Click += showWindowMenuItem_Click;
+            //
+            // exitToolStripMenuItem
+            //
+            exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+            exitToolStripMenuItem.Size = new System.Drawing.Size(136, 22);
+            exitToolStripMenuItem.Text = "退出";
+            exitToolStripMenuItem.Click += exitMenuItem_Click;
+            //
             // MainForm
-            // 
-            ClientSize = new System.Drawing.Size(620, 228);
-            Controls.Add(lblCountdown);
-            Controls.Add(panel1);
+            //
+            ClientSize = new System.Drawing.Size(680, 720);
+            MinimumSize = new System.Drawing.Size(620, 680);
+            Controls.Add(tabs);
+            Controls.Add(pageHeader1);
             Icon = ((System.Drawing.Icon)resources.GetObject("$this.Icon"));
             StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            Text = "MainForm";
+            Text = "番茄倒计时";
             FormClosing += MainForm_FormClosing;
-            panel1.ResumeLayout(false);
             contextMenuStrip1.ResumeLayout(false);
             ResumeLayout(false);
         }
 
-        private AntdUI.Button btn_del;
-        private AntdUI.Button btn_edit;
-
         #endregion
 
-        private AntdUI.Panel panel1;
-        private AntdUI.Button btn_countdown;
-        private AntdUI.Label lblCountdown;
-        private AntdUI.Button button1;
         private AntdUI.PageHeader pageHeader1;
+        private AntdUI.Tabs tabs;
+        private AntdUI.TabPage tabPomodoro;
+        private AntdUI.TabPage tabMemo;
         private NotifyIcon notifyIcon_cd;
         private ContextMenuStrip contextMenuStrip1;
-        private ToolStripMenuItem 退出ToolStripMenuItem;
-        private AntdUI.Select select_event;
-        private AntdUI.Button btn_addEvent;
+        private ToolStripMenuItem showWindowToolStripMenuItem;
+        private ToolStripMenuItem exitToolStripMenuItem;
     }
 }
