@@ -6,6 +6,7 @@ using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Service.ServiceImpl;
+using CountTimer.Share;
 
 namespace CountTimer.View
 {
@@ -41,18 +42,8 @@ namespace CountTimer.View
                 Id = record.Id;
                 时间 = record.recordTime;
                 内容 = record.content;
-                操作 = new CellButton("del", "删除", TTypeMini.Error);
+                操作 = new CellButton("del", I18n.T("删除", "Delete"), TTypeMini.Error);
             }
-        }
-
-        public MemoControl()
-        {
-            // 禁用字体自动缩放，避免容器对子控件非等比缩放
-            AutoScaleMode = AutoScaleMode.None;
-            BuildUi();
-            this.AddListener();
-            UpdateThemeColors();
-            RefreshRecords();
         }
 
         public void HandleEvent(AntdUI.EventType id, object? tag)
@@ -79,6 +70,38 @@ namespace CountTimer.View
             lblSummary.ForeColor = UiTheme.TextSub;
         }
 
+        public MemoControl()
+        {
+            // 禁用字体自动缩放，避免容器对子控件非等比缩放
+            AutoScaleMode = AutoScaleMode.None;
+            BuildUi();
+            this.AddListener();
+            UpdateThemeColors();
+            ApplyLanguage();
+        }
+
+        /// <summary>按当前语言重建表格列标题</summary>
+        private void BuildColumns()
+        {
+            table_records.Columns.Clear();
+            table_records.Columns.Add(new Column(nameof(MemoRow.时间), I18n.T("时间", "Time")) { Width = "170" });
+            table_records.Columns.Add(new Column(nameof(MemoRow.内容), I18n.T("内容", "Content")));
+            table_records.Columns.Add(new Column(nameof(MemoRow.操作), I18n.T("操作", "Action"), ColumnAlign.Center) { Width = "80" });
+        }
+
+        /// <summary>语言切换后重刷静态文案与列表</summary>
+        public void ApplyLanguage()
+        {
+            input_content.PlaceholderText = I18n.T("记点什么，例如：完成了一节网课", "Write something, e.g. finished a lesson");
+            dp_time.PlaceholderText = I18n.T("请选择时间", "Pick a time");
+            btn_add.Text = I18n.T("添加", "Add");
+            dp_filter.PlaceholderText = I18n.T("选择日期查看历史", "Filter by date");
+            btn_filter_all.Text = I18n.T("全部", "All");
+            table_records.EmptyText = I18n.T("暂无记录，先记一条吧", "No records yet — add one!");
+            BuildColumns();
+            RefreshRecords();
+        }
+
         private void BuildUi()
         {
             Dock = DockStyle.Fill;
@@ -90,18 +113,18 @@ namespace CountTimer.View
             toolbarPanel.BackColor = UiTheme.PageBg;
             toolbarPanel.Layout += ToolbarPanel_Layout;
 
-            input_content.PlaceholderText = "记点什么，例如：完成了一节网课";
+            input_content.PlaceholderText = I18n.T("记点什么，例如：完成了一节网课", "Write something, e.g. finished a lesson");
             input_content.Size = new Size(320, 40);
             input_content.KeyDown += input_content_KeyDown;
             toolbarPanel.Controls.Add(input_content);
 
             dp_time.Format = DateTimeFormat;
-            dp_time.PlaceholderText = "请选择时间";
+            dp_time.PlaceholderText = I18n.T("请选择时间", "Pick a time");
             dp_time.Size = new Size(200, 40);
             dp_time.Value = DateTime.Now;
             toolbarPanel.Controls.Add(dp_time);
 
-            btn_add.Text = "添加";
+            btn_add.Text = I18n.T("添加", "Add");
             btn_add.Type = TTypeMini.Primary;
             btn_add.Size = new Size(84, 40);
             btn_add.Click += btn_add_Click;
@@ -114,31 +137,28 @@ namespace CountTimer.View
             filterPanel.Layout += FilterPanel_Layout;
 
             dp_filter.Format = "yyyy-MM-dd";
-            dp_filter.PlaceholderText = "选择日期查看历史";
+            dp_filter.PlaceholderText = I18n.T("选择日期查看历史", "Filter by date");
             dp_filter.Size = new Size(180, 36);
             dp_filter.ValueChanged += dp_filter_ValueChanged;
             filterPanel.Controls.Add(dp_filter);
 
-            btn_filter_all.Text = "全部";
+            btn_filter_all.Text = I18n.T("全部", "All");
             btn_filter_all.Ghost = true;
             btn_filter_all.BorderWidth = 1F;
             btn_filter_all.Size = new Size(64, 36);
             btn_filter_all.Click += btn_filter_all_Click;
             filterPanel.Controls.Add(btn_filter_all);
 
-            lblSummary.Text = "今日 0 条";
             lblSummary.Font = new Font("Microsoft YaHei UI", 10F);
             lblSummary.Dock = DockStyle.Top;
             lblSummary.Height = 28;
             lblSummary.TextAlign = ContentAlignment.MiddleCenter;
 
             table_records.Dock = DockStyle.Fill;
-            table_records.EmptyText = "暂无记录，先记一条吧";
+            table_records.EmptyText = I18n.T("暂无记录，先记一条吧", "No records yet — add one!");
             table_records.Bordered = false;
             table_records.FixedHeader = true;
-            table_records.Columns.Add(new Column(nameof(MemoRow.时间), "时间") { Width = "170" });
-            table_records.Columns.Add(new Column(nameof(MemoRow.内容), "内容"));
-            table_records.Columns.Add(new Column(nameof(MemoRow.操作), "操作", ColumnAlign.Center) { Width = "80" });
+            BuildColumns();
             table_records.CellButtonClick += table_records_CellButtonClick;
 
             // 停靠按添加的逆序处理（后添加的先停靠且更靠上）：
@@ -192,7 +212,7 @@ namespace CountTimer.View
             string content = input_content.Text.Trim();
             if (content.Length == 0)
             {
-                AntdUI.Message.warn(FindForm()!, "请输入记录内容", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请输入记录内容", "Please enter the content"), autoClose: 2);
                 return;
             }
 
@@ -209,11 +229,11 @@ namespace CountTimer.View
                 input_content.Text = string.Empty;
                 dp_time.Value = DateTime.Now;
                 RefreshRecords();
-                AntdUI.Message.success(FindForm()!, "已记录", autoClose: 1);
+                AntdUI.Message.success(FindForm()!, I18n.T("已记录", "Saved"), autoClose: 1);
             }
             else
             {
-                AntdUI.Message.error(FindForm()!, "记录失败", autoClose: 2);
+                AntdUI.Message.error(FindForm()!, I18n.T("记录失败", "Failed to save"), autoClose: 2);
             }
         }
 
@@ -224,7 +244,9 @@ namespace CountTimer.View
                 return;
             }
 
-            var config = new AntdUI.Modal.Config(FindForm()!, "确认删除", $"确定要删除这条记录吗？\n{row.时间} {row.内容}")
+            var config = new AntdUI.Modal.Config(FindForm()!,
+                I18n.T("确认删除", "Confirm deletion"),
+                I18n.F("确定要删除这条记录吗？\n{0} {1}", "Delete this record?\n{0} {1}", row.时间, row.内容))
             {
                 OnOk = (cfg) =>
                 {
@@ -264,8 +286,8 @@ namespace CountTimer.View
 
             table_records.Binding(rows);
             lblSummary.Text = filterDate.HasValue
-                ? $"{filterDate:yyyy-MM-dd} {records.Count} 条"
-                : $"今日 {service.GetTodayCount()} 条 · 共 {records.Count} 条";
+                ? I18n.F("{0} · {1} 条", "{0} · {1} entries", filterDate.Value.ToString("yyyy-MM-dd"), records.Count)
+                : I18n.F("今日 {0} 条 · 共 {1} 条", "{0} today · {1} total", service.GetTodayCount(), records.Count);
         }
 
         protected override void OnVisibleChanged(EventArgs e)

@@ -13,5 +13,7 @@ namespace CountTimer.Model
         public bool AutoStartFocus { get; set; } = true;
         public bool SoundEnabled { get; set; } = true;
         public bool DarkMode { get; set; } = false;
+        /// <summary>界面语言："zh" / "en"</summary>
+        public string Language { get; set; } = "zh";
     }
 }

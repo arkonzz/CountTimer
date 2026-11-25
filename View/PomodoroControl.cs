@@ -6,6 +6,7 @@ using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Service.ServiceImpl;
+using CountTimer.Share;
 
 namespace CountTimer.View
 {
@@ -69,6 +70,8 @@ namespace CountTimer.View
 
         private readonly System.Windows.Forms.Panel settingsWrapper = new System.Windows.Forms.Panel();
         private readonly CardPanel settingsCard = new CardPanel();
+        private readonly AntdUI.Label lblLanguage = new AntdUI.Label();
+        private readonly AntdUI.Select select_lang = new AntdUI.Select();
         private readonly List<(AntdUI.Label label, AntdUI.InputNumber input)> durationFields = [];
         private readonly List<(AntdUI.Switch toggle, AntdUI.Label label)> toggleFields = [];
 
@@ -119,8 +122,8 @@ namespace CountTimer.View
             Dock = DockStyle.Fill;
             BackColor = UiTheme.PageBg;
 
-            // 阶段标题（颜色随阶段变化）
-            lblPhase.Text = "专注 · 第 1 / 4 轮";
+            // 阶段标题（颜色随阶段变化）——ApplyLanguage 后由 SyncPhaseUi 按当前阶段重写
+            lblPhase.Text = I18n.F("专注 · 第 {0} / {1} 轮", "Focus · Round {0} / {1}", 1, settings.RoundsBeforeLongBreak);
             lblPhase.Font = new Font("Microsoft YaHei UI", 13F, FontStyle.Bold);
             lblPhase.ForeColor = UiTheme.FocusColor;
             lblPhase.Size = new Size(360, 32);
@@ -133,25 +136,25 @@ namespace CountTimer.View
             // 操作行：事件下拉（任务+倒计时）+ 跳过 + 开始/暂停 + 重置
             select_event.List = true;
             select_event.MaxCount = 6;
-            select_event.PlaceholderText = "选择事件（任务 / 倒计时）";
+            select_event.PlaceholderText = I18n.T("选择事件（任务 / 倒计时）", "Select event (task / countdown)");
             select_event.Size = new Size(260, 40);
             select_event.SelectedValueChanged += select_event_SelectedValueChanged;
             Controls.Add(select_event);
 
-            btnSkip.Text = "跳过";
+            btnSkip.Text = I18n.T("跳过", "Skip");
             btnSkip.Ghost = true;
             btnSkip.BorderWidth = 1F;
             btnSkip.Size = new Size(64, 44);
             btnSkip.Click += btnSkip_Click;
             Controls.Add(btnSkip);
 
-            btnStart.Text = "开始专注";
+            btnStart.Text = I18n.T("开始专注", "Start focus");
             btnStart.Type = AntdUI.TTypeMini.Error;
             btnStart.Size = new Size(128, 44);
             btnStart.Click += btnStart_Click;
             Controls.Add(btnStart);
 
-            btnReset.Text = "重置";
+            btnReset.Text = I18n.T("重置", "Reset");
             btnReset.Ghost = true;
             btnReset.BorderWidth = 1F;
             btnReset.Size = new Size(64, 44);
@@ -159,21 +162,21 @@ namespace CountTimer.View
             Controls.Add(btnReset);
 
             // 事件倒计时行：开关 + 管理 + 剩余时间
-            btnEventToggle.Text = "倒计时";
+            btnEventToggle.Text = I18n.T("倒计时", "Countdown");
             btnEventToggle.Ghost = true;
             btnEventToggle.BorderWidth = 1F;
             btnEventToggle.Size = new Size(96, 44);
             btnEventToggle.Click += btnEventToggle_Click;
             Controls.Add(btnEventToggle);
 
-            btnAddEvent.Text = "新增";
+            btnAddEvent.Text = I18n.T("新增", "Add");
             btnAddEvent.Type = AntdUI.TTypeMini.Primary;
             btnAddEvent.Size = new Size(56, 44);
             btnAddEvent.Click += btnAddEvent_Click;
             Controls.Add(btnAddEvent);
 
             btnEditEvent.Enabled = false;
-            btnEditEvent.Text = "编辑";
+            btnEditEvent.Text = I18n.T("编辑", "Edit");
             btnEditEvent.Ghost = true;
             btnEditEvent.BorderWidth = 1F;
             btnEditEvent.Size = new Size(56, 44);
@@ -181,7 +184,7 @@ namespace CountTimer.View
             Controls.Add(btnEditEvent);
 
             btnDelEvent.Enabled = false;
-            btnDelEvent.Text = "删除";
+            btnDelEvent.Text = I18n.T("删除", "Delete");
             btnDelEvent.Ghost = true;
             btnDelEvent.BorderWidth = 1F;
             btnDelEvent.Type = AntdUI.TTypeMini.Error;
@@ -189,14 +192,14 @@ namespace CountTimer.View
             btnDelEvent.Click += btnDelEvent_Click;
             Controls.Add(btnDelEvent);
 
-            lblEvent.Text = "选择事件后自动开始倒计时";
+            lblEvent.Text = I18n.T("选择事件后自动开始倒计时", "Select an event to start its countdown");
             lblEvent.Font = new Font("Microsoft YaHei UI", 10F);
             lblEvent.ForeColor = UiTheme.TextSub;
             lblEvent.Size = new Size(210, 44);
             lblEvent.TextAlign = ContentAlignment.MiddleLeft;
             Controls.Add(lblEvent);
 
-            lblStats.Text = "今日 0 个番茄 · 0 分钟专注";
+            lblStats.Text = I18n.T("今日 0 个番茄 · 0 分钟专注", "0 pomodoros today · 0 min focused");
             lblStats.Font = new Font("Microsoft YaHei UI", 10.5F);
             lblStats.ForeColor = UiTheme.TextSub;
             lblStats.Size = new Size(360, 26);
@@ -219,28 +222,44 @@ namespace CountTimer.View
             settingsCard.Layout += SettingsCard_Layout;
             settingsWrapper.Controls.Add(settingsCard);
 
-            lblSettingsTitle.Text = "设置";
+            lblSettingsTitle.Text = I18n.T("设置", "Settings");
             lblSettingsTitle.Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold);
             lblSettingsTitle.ForeColor = UiTheme.TextMain;
             lblSettingsTitle.Size = new Size(60, 24);
             lblSettingsTitle.TextAlign = ContentAlignment.MiddleLeft;
             settingsCard.Controls.Add(lblSettingsTitle);
 
+            // 语言切换（标题右侧；每种语言用自己的文字显示，不随语言翻译）
+            lblLanguage.Text = I18n.T("语言", "Language");
+            lblLanguage.Font = new Font("Microsoft YaHei UI", 9.5F);
+            lblLanguage.ForeColor = UiTheme.TextSub;
+            lblLanguage.Size = new Size(48, 24);
+            lblLanguage.TextAlign = ContentAlignment.MiddleLeft;
+            settingsCard.Controls.Add(lblLanguage);
+
+            select_lang.Items.AddRange(new object[] { "中文", "English" });
+            select_lang.List = true;
+            select_lang.Size = new Size(104, 30);
+            select_lang.SelectedIndex = I18n.IsEnglish ? 1 : 0;
+            // 初始化完成后再挂事件，避免程序化赋值触发切换（同深色主题开关的做法）
+            select_lang.SelectedValueChanged += select_lang_SelectedValueChanged;
+            settingsCard.Controls.Add(select_lang);
+
             durationFields.AddRange([
-                MakeDurationField("专注(分)", numFocus, 240),
-                MakeDurationField("短休(分)", numShortBreak, 120),
-                MakeDurationField("长休(分)", numLongBreak, 180),
-                MakeDurationField("长休(轮)", numRounds, 12)
+                MakeDurationField(I18n.T("专注(分)", "Focus (min)"), numFocus, 240),
+                MakeDurationField(I18n.T("短休(分)", "Short (min)"), numShortBreak, 120),
+                MakeDurationField(I18n.T("长休(分)", "Long (min)"), numLongBreak, 180),
+                MakeDurationField(I18n.T("长休(轮)", "Rounds"), numRounds, 12)
             ]);
 
             toggleFields.AddRange([
-                MakeToggleField(switchAutoBreak, "自动休息"),
-                MakeToggleField(switchAutoFocus, "自动专注"),
-                MakeToggleField(switchSound, "提示音"),
-                MakeToggleField(switchDark, "深色主题")
+                MakeToggleField(switchAutoBreak, I18n.T("自动休息", "Auto break")),
+                MakeToggleField(switchAutoFocus, I18n.T("自动专注", "Auto focus")),
+                MakeToggleField(switchSound, I18n.T("提示音", "Sound")),
+                MakeToggleField(switchDark, I18n.T("深色主题", "Dark mode"))
             ]);
 
-            btnSaveSettings.Text = "保存设置";
+            btnSaveSettings.Text = I18n.T("保存设置", "Save");
             btnSaveSettings.Type = AntdUI.TTypeMini.Primary;
             btnSaveSettings.Size = new Size(84, 34);
             btnSaveSettings.Click += btnSaveSettings_Click;
@@ -334,7 +353,10 @@ namespace CountTimer.View
             int innerX = 20;
             int columnWidth = (settingsCard.Width - innerX * 2) / 4;
 
+            // 语言选择器跟随标题右侧（标题宽度随语言变化）
             lblSettingsTitle.Location = new Point(innerX, 10);
+            lblLanguage.Location = new Point(lblSettingsTitle.Right + 12, 12);
+            select_lang.Location = new Point(lblLanguage.Right + 6, 6);
             btnSaveSettings.Location = new Point(settingsCard.Width - 20 - btnSaveSettings.Width, 6);
 
             for (int i = 0; i < durationFields.Count; i++)
@@ -392,6 +414,88 @@ namespace CountTimer.View
             ThemeChanged?.Invoke(settings.DarkMode);
         }
 
+        /// <summary>语言切换：持久化 + 全局广播（主窗体统一重刷各页签文案）</summary>
+        private void select_lang_SelectedValueChanged(object sender, ObjectNEventArgs e)
+        {
+            var language = select_lang.SelectedIndex == 1 ? AppLanguage.English : AppLanguage.Chinese;
+            if (language == I18n.Language)
+            {
+                return;
+            }
+
+            settings.Language = language == AppLanguage.English ? "en" : "zh";
+            settingsService.Save(settings);
+            I18n.SetLanguage(language);
+        }
+
+        /// <summary>语言切换后重刷本页静态文案（动态文案由对应状态刷新逻辑重算）</summary>
+        public void ApplyLanguage()
+        {
+            select_event.PlaceholderText = I18n.T("选择事件（任务 / 倒计时）", "Select event (task / countdown)");
+            btnSkip.Text = I18n.T("跳过", "Skip");
+            btnReset.Text = I18n.T("重置", "Reset");
+            btnEventToggle.Text = I18n.T("倒计时", "Countdown");
+            btnAddEvent.Text = I18n.T("新增", "Add");
+            btnEditEvent.Text = I18n.T("编辑", "Edit");
+            btnDelEvent.Text = I18n.T("删除", "Delete");
+            lblSettingsTitle.Text = I18n.T("设置", "Settings");
+            lblLanguage.Text = I18n.T("语言", "Language");
+            btnSaveSettings.Text = I18n.T("保存设置", "Save");
+            // 防御性同步：语言被程序化修改时下拉框保持一致（再次触发时同语言会空操作，无死循环）
+            select_lang.SelectedIndex = I18n.IsEnglish ? 1 : 0;
+
+            // 标签宽度按文本实测（中文宽度写死会让英文换行/截断）
+            lblSettingsTitle.Size = new Size(TextRenderer.MeasureText(lblSettingsTitle.Text, lblSettingsTitle.Font).Width + 8, 24);
+            lblLanguage.Size = new Size(TextRenderer.MeasureText(lblLanguage.Text, lblLanguage.Font).Width + 8, 24);
+
+            string[] durationTexts =
+            {
+                I18n.T("专注(分)", "Focus (min)"),
+                I18n.T("短休(分)", "Short (min)"),
+                I18n.T("长休(分)", "Long (min)"),
+                I18n.T("长休(轮)", "Rounds")
+            };
+            for (int i = 0; i < durationFields.Count; i++)
+            {
+                durationFields[i].label.Text = durationTexts[i];
+                durationFields[i].label.Size = new Size(
+                    Math.Max(90, TextRenderer.MeasureText(durationTexts[i], durationFields[i].label.Font).Width + 8), 18);
+            }
+
+            string[] toggleTexts =
+            {
+                I18n.T("自动休息", "Auto break"),
+                I18n.T("自动专注", "Auto focus"),
+                I18n.T("提示音", "Sound"),
+                I18n.T("深色主题", "Dark mode")
+            };
+            for (int i = 0; i < toggleFields.Count; i++)
+            {
+                toggleFields[i].label.Text = toggleTexts[i];
+                toggleFields[i].label.Size = new Size(TextRenderer.MeasureText(toggleTexts[i], toggleFields[i].label.Font).Width + 6, 24);
+            }
+
+            // 按当前状态重算动态文本：阶段行/开始按钮/统计/事件行
+            SyncPhaseUi(controller.Remaining);
+            RefreshStats();
+            if (select_event.SelectedValue is not ToDoThing)
+            {
+                // 未选中事件：恢复占位提示（含"暂无事件"分支）
+                InitSelectEvent();
+                btnEventToggle.Text = I18n.T("倒计时", "Countdown");
+            }
+            else if (_eventCountdownPaused)
+            {
+                lblEvent.Text = I18n.T("倒计时已暂停", "Countdown paused");
+                btnEventToggle.Text = I18n.T("继续倒计时", "Resume");
+            }
+            else
+            {
+                btnEventToggle.Text = I18n.T("暂停倒计时", "Pause countdown");
+                // 剩余时间文案由下一次 Tick（≤1s）自动刷新
+            }
+        }
+
         private void btnSaveSettings_Click(object? sender, EventArgs e)
         {
             settings.FocusMinutes = (int)numFocus.Value;
@@ -406,7 +510,7 @@ namespace CountTimer.View
             controller.ApplySettings(settings);
             LoadSettingsToInputs();
             RefreshStats();
-            AntdUI.Message.success(FindForm()!, "设置已保存，计时已重置", autoClose: 2);
+            AntdUI.Message.success(FindForm()!, I18n.T("设置已保存，计时已重置", "Settings saved, timer reset"), autoClose: 2);
         }
 
         private void Controller_Tick(TimeSpan remaining, PomodoroPhase phase, int round, int totalRounds)
@@ -470,15 +574,19 @@ namespace CountTimer.View
                         focusMinutes = settings.FocusMinutes
                     });
                     string taskName = (select_event.SelectedValue as ToDoThing)?.toDoInfo ?? string.Empty;
-                    string taskSuffix = string.IsNullOrWhiteSpace(taskName) ? "" : $"\n任务：{taskName}";
-                    showBalloon("专注完成 🍅", $"完成了 {settings.FocusMinutes} 分钟专注，休息一下吧！{taskSuffix}");
+                    string taskSuffix = string.IsNullOrWhiteSpace(taskName)
+                        ? ""
+                        : I18n.F("\n任务：{0}", "\nTask: {0}", taskName);
+                    showBalloon(
+                        I18n.T("专注完成 🍅", "Focus complete 🍅"),
+                        I18n.F("完成了 {0} 分钟专注，休息一下吧！", "Focused {0} min — take a break!", settings.FocusMinutes) + taskSuffix);
                     RefreshStats();
                     break;
                 case PomodoroPhase.ShortBreak:
-                    showBalloon("休息结束", "短休息结束，开始新的专注！");
+                    showBalloon(I18n.T("休息结束", "Break over"), I18n.T("短休息结束，开始新的专注！", "Short break over — start a new focus!"));
                     break;
                 case PomodoroPhase.LongBreak:
-                    showBalloon("长休息结束", "充电完成，开始新一轮专注！");
+                    showBalloon(I18n.T("长休息结束", "Long break over"), I18n.T("充电完成，开始新一轮专注！", "Recharged — start a new round!"));
                     break;
             }
         }
@@ -487,10 +595,10 @@ namespace CountTimer.View
         {
             (string title, Color color, AntdUI.TTypeMini buttonType) = controller.Phase switch
             {
-                PomodoroPhase.Focus => ("专注", UiTheme.FocusColor, AntdUI.TTypeMini.Error),
-                PomodoroPhase.ShortBreak => ("短休息", UiTheme.BreakColor, AntdUI.TTypeMini.Success),
-                PomodoroPhase.LongBreak => ("长休息", UiTheme.LongBreakColor, AntdUI.TTypeMini.Primary),
-                _ => ("专注", UiTheme.FocusColor, AntdUI.TTypeMini.Error)
+                PomodoroPhase.Focus => (I18n.T("专注", "Focus"), UiTheme.FocusColor, AntdUI.TTypeMini.Error),
+                PomodoroPhase.ShortBreak => (I18n.T("短休息", "Short break"), UiTheme.BreakColor, AntdUI.TTypeMini.Success),
+                PomodoroPhase.LongBreak => (I18n.T("长休息", "Long break"), UiTheme.LongBreakColor, AntdUI.TTypeMini.Primary),
+                _ => (I18n.T("专注", "Focus"), UiTheme.FocusColor, AntdUI.TTypeMini.Error)
             };
 
             ring.TitleText = title;
@@ -500,7 +608,7 @@ namespace CountTimer.View
             ring.Progress = phaseSeconds > 0 ? (float)(remaining.TotalSeconds / phaseSeconds) : 0f;
 
             int displayRound = ((controller.RoundIndex - 1) % settings.RoundsBeforeLongBreak) + 1;
-            lblPhase.Text = $"{title} · 第 {displayRound} / {settings.RoundsBeforeLongBreak} 轮";
+            lblPhase.Text = I18n.F("{0} · 第 {1} / {2} 轮", "{0} · Round {1} / {2}", title, displayRound, settings.RoundsBeforeLongBreak);
             lblPhase.ForeColor = color;
             btnStart.Type = buttonType;
             UpdateStartButton();
@@ -509,8 +617,10 @@ namespace CountTimer.View
         private void UpdateStartButton()
         {
             btnStart.Text = controller.IsRunning
-                ? "暂停"
-                : (controller.Remaining < controller.PhaseDuration ? "继续" : (controller.Phase == PomodoroPhase.Focus ? "开始专注" : "开始休息"));
+                ? I18n.T("暂停", "Pause")
+                : (controller.Remaining < controller.PhaseDuration
+                    ? I18n.T("继续", "Resume")
+                    : (controller.Phase == PomodoroPhase.Focus ? I18n.T("开始专注", "Start focus") : I18n.T("开始休息", "Start break")));
         }
 
         #endregion
@@ -529,8 +639,8 @@ namespace CountTimer.View
                 btnEditEvent.Enabled = false;
                 btnDelEvent.Enabled = false;
                 _countdownController.Stop();
-                lblEvent.Text = "选择事件后自动开始倒计时";
-                btnEventToggle.Text = "倒计时";
+                lblEvent.Text = I18n.T("选择事件后自动开始倒计时", "Select an event to start its countdown");
+                btnEventToggle.Text = I18n.T("倒计时", "Countdown");
                 _eventCountdownPaused = false;
                 return;
             }
@@ -548,23 +658,26 @@ namespace CountTimer.View
                 return;
             }
 
-            if (!_countdownController.Start(toDoThing, out string? errorMessage))
+            var status = _countdownController.Start(toDoThing);
+            if (status != CountdownStartStatus.Started)
             {
-                lblEvent.Text = errorMessage ?? "倒计时启动失败";
-                btnEventToggle.Text = "倒计时";
+                lblEvent.Text = status == CountdownStartStatus.InvalidTime
+                    ? I18n.T("事件时间格式异常", "Invalid event time")
+                    : I18n.T("事件已结束", "Event ended");
+                btnEventToggle.Text = I18n.T("倒计时", "Countdown");
                 _eventCountdownPaused = false;
                 return;
             }
 
             _eventCountdownPaused = false;
-            btnEventToggle.Text = "暂停倒计时";
+            btnEventToggle.Text = I18n.T("暂停倒计时", "Pause countdown");
         }
 
         private void btnEventToggle_Click(object? sender, EventArgs e)
         {
             if (select_event.SelectedValue is not ToDoThing)
             {
-                AntdUI.Message.warn(FindForm()!, "请先选择事件", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请先选择事件", "Select an event first"), autoClose: 2);
                 return;
             }
 
@@ -576,19 +689,19 @@ namespace CountTimer.View
             {
                 _countdownController.Stop();
                 _eventCountdownPaused = true;
-                btnEventToggle.Text = "继续倒计时";
-                lblEvent.Text = "倒计时已暂停";
+                btnEventToggle.Text = I18n.T("继续倒计时", "Resume countdown");
+                lblEvent.Text = I18n.T("倒计时已暂停", "Countdown paused");
             }
         }
 
         private void CountdownController_Tick(TimeSpan remaining, ToDoThing toDoThing)
         {
-            lblEvent.Text = $"「{toDoThing.toDoInfo}」剩余 {FormatRemainingCompact(remaining)}";
+            lblEvent.Text = I18n.F("「{0}」剩余 {1}", "\"{0}\" — {1} left", toDoThing.toDoInfo, FormatRemainingCompact(remaining));
         }
 
         private void CountdownController_Completed(ToDoThing toDoThing)
         {
-            lblEvent.Text = $"「{toDoThing.toDoInfo}」时间到！";
+            lblEvent.Text = I18n.F("「{0}」时间到！", "\"{0}\" — time's up!", toDoThing.toDoInfo);
             NotifyEventEnded(toDoThing);
         }
 
@@ -615,8 +728,8 @@ namespace CountTimer.View
         private void ShowNotification(string eventName)
         {
             string notificationText = string.IsNullOrWhiteSpace(eventName)
-                ? "时间到！"
-                : $"{eventName} 事件结束";
+                ? I18n.T("时间到！", "Time's up!")
+                : I18n.F("{0} 事件结束", "{0} event ended", eventName);
             DateTime now = DateTime.Now;
             if (_lastNotificationText == notificationText &&
                 now - _lastNotificationTime < DuplicateNotificationWindow)
@@ -626,7 +739,7 @@ namespace CountTimer.View
 
             _lastNotificationText = notificationText;
             _lastNotificationTime = now;
-            showBalloon("倒计时结束", notificationText);
+            showBalloon(I18n.T("倒计时结束", "Countdown finished"), notificationText);
         }
 
         private void RefreshEventsFromWorker()
@@ -680,7 +793,7 @@ namespace CountTimer.View
                     btnEditEvent.Enabled = false;
                     btnDelEvent.Enabled = false;
                     _countdownController.Stop();
-                    lblEvent.Text = "暂无事件，点击新增创建";
+                    lblEvent.Text = I18n.T("暂无事件，点击新增创建", "No events yet — click Add to create one");
                     return;
                 }
 
@@ -696,7 +809,7 @@ namespace CountTimer.View
                     btnEditEvent.Enabled = false;
                     btnDelEvent.Enabled = false;
                     _countdownController.Stop();
-                    lblEvent.Text = "事件已结束";
+                    lblEvent.Text = I18n.T("事件已结束", "Event ended");
                 }
             }
             finally
@@ -714,7 +827,7 @@ namespace CountTimer.View
         {
             if (select_event.SelectedValue == null)
             {
-                AntdUI.Message.warn(FindForm()!, "请先选择要编辑的事件", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请先选择要编辑的事件", "Select an event to edit first"), autoClose: 2);
                 return;
             }
 
@@ -751,7 +864,7 @@ namespace CountTimer.View
         {
             if (select_event.SelectedValue == null)
             {
-                AntdUI.Message.warn(FindForm()!, "请先选择要删除的事件", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请先选择要删除的事件", "Select an event to delete first"), autoClose: 2);
                 return;
             }
 
@@ -759,14 +872,16 @@ namespace CountTimer.View
             var parentForm = FindForm()!;
 
             // 使用 Modal.Config 配置对话框
-            var config = new AntdUI.Modal.Config(parentForm, "确认删除", $"确定要删除事件 \"{selectedTodo.toDoInfo}\" 吗？")
+            var config = new AntdUI.Modal.Config(parentForm,
+                I18n.T("确认删除", "Confirm deletion"),
+                I18n.F("确定要删除事件 \"{0}\" 吗？", "Delete event \"{0}\"?", selectedTodo.toDoInfo))
             {
                 OnOk = (cfg) => {
                     todoService.deleteById(selectedTodo.Id);
-                    AntdUI.Message.success(parentForm, "删除成功", autoClose: 2);
+                    AntdUI.Message.success(parentForm, I18n.T("删除成功", "Deleted"), autoClose: 2);
                     _countdownController.Stop();
-                    lblEvent.Text = "事件已删除";
-                    btnEventToggle.Text = "倒计时";
+                    lblEvent.Text = I18n.T("事件已删除", "Event deleted");
+                    btnEventToggle.Text = I18n.T("倒计时", "Countdown");
                     _eventCountdownPaused = false;
                     InitSelectEvent();
                     return true; // 返回 true 关闭对话框
@@ -789,7 +904,7 @@ namespace CountTimer.View
             }
 
             return remaining.Days > 0
-                ? $"{remaining.Days}天 {remaining.Hours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}"
+                ? I18n.F("{0}天 {1:D2}:{2:D2}:{3:D2}", "{0}d {1:D2}:{2:D2}:{3:D2}", remaining.Days, remaining.Hours, remaining.Minutes, remaining.Seconds)
                 : $"{remaining.Hours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}";
         }
 
@@ -884,7 +999,7 @@ namespace CountTimer.View
         {
             int count = sessionService.GetTodayCount();
             int minutes = sessionService.GetTodayMinutes();
-            lblStats.Text = $"今日 {count} 个番茄 · {minutes} 分钟专注";
+            lblStats.Text = I18n.F("今日 {0} 个番茄 · {1} 分钟专注", "{0} pomodoros today · {1} min focused", count, minutes);
         }
 
         protected override void Dispose(bool disposing)

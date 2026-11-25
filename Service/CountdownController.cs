@@ -5,6 +5,14 @@ using Timer = System.Windows.Forms.Timer;
 
 namespace CountTimer.Service
 {
+    /// <summary>事件倒计时启动结果（文案由 UI 层按当前语言映射）</summary>
+    public enum CountdownStartStatus
+    {
+        Started,
+        InvalidTime,
+        AlreadyEnded
+    }
+
     public sealed class CountdownController : IDisposable
     {
         private const int CountdownIntervalMilliseconds = 1000;
@@ -21,46 +29,28 @@ namespace CountTimer.Service
         public event Action<TimeSpan, ToDoThing>? Tick;
         public event Action<ToDoThing>? Completed;
 
-        public bool Start(ToDoThing toDoThing, out string? errorMessage)
+        public CountdownStartStatus Start(ToDoThing toDoThing)
         {
-            errorMessage = null;
-
             if (!DateTime.TryParse(toDoThing.endTime, out _targetTime))
             {
                 Stop();
-                errorMessage = "事件时间格式异常";
-                return false;
+                return CountdownStartStatus.InvalidTime;
             }
 
             if (_targetTime <= DateTime.Now)
             {
                 Stop();
-                errorMessage = "事件已结束";
-                return false;
+                return CountdownStartStatus.AlreadyEnded;
             }
 
             _currentTodo = toDoThing;
             _timer.Start();
-            return true;
+            return CountdownStartStatus.Started;
         }
 
         public void Stop()
         {
             _timer.Stop();
-        }
-
-        public static string FormatTimeSpan(TimeSpan remaining, bool isRegular)
-        {
-            if (isRegular)
-            {
-                return remaining.TotalSeconds > 0
-                    ? $"{remaining.Hours:D2} 时 {remaining.Minutes:D2} 分 {remaining.Seconds:D2} 秒"
-                    : "00 时 00 分 00 秒";
-            }
-
-            return remaining.TotalSeconds > 0
-                ? $"{remaining.Days:D2} 天 {remaining.Hours:D2} 时 {remaining.Minutes:D2} 分 {remaining.Seconds:D2} 秒"
-                : "00 天 00 时 00 分 00 秒";
         }
 
         private void Timer_Tick(object? sender, EventArgs e)

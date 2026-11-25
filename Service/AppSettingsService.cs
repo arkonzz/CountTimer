@@ -58,6 +58,7 @@ namespace CountTimer.Service
             settings.ShortBreakMinutes = Math.Clamp(settings.ShortBreakMinutes, 1, 120);
             settings.LongBreakMinutes = Math.Clamp(settings.LongBreakMinutes, 1, 180);
             settings.RoundsBeforeLongBreak = Math.Clamp(settings.RoundsBeforeLongBreak, 1, 12);
+            settings.Language = settings.Language == "en" ? "en" : "zh";
             return settings;
         }
     }

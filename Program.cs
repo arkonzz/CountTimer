@@ -24,7 +24,12 @@ namespace CountTimer
             }
             else
             {
-                MessageBox.Show("程序已在运行中", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                // 单实例互斥时 UI 尚未初始化语言，直接按系统文化粗判（仅此一处提示框）
+                bool preferEnglish = !System.Globalization.CultureInfo.CurrentUICulture.Name.StartsWith("zh");
+                MessageBox.Show(
+                    preferEnglish ? "CountTimer is already running" : "程序已在运行中",
+                    preferEnglish ? "Notice" : "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
     }

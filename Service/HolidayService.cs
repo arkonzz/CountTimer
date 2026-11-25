@@ -36,18 +36,18 @@ namespace CountTimer.Service
             // 最终按 MaxUpcomingCount 截断，列表尾部永远连续
             for (int year = today.Year - 1; year <= today.Year + 2; year++)
             {
-                AddFixed(list, "元旦", year, 1, 1);
-                AddLunar(list, "春节", year, 1, 1);
-                AddLunar(list, "元宵节", year, 1, 15);
+                AddFixed(list, "元旦", "New Year's Day", year, 1, 1);
+                AddLunar(list, "春节", "Spring Festival", year, 1, 1);
+                AddLunar(list, "元宵节", "Lantern Festival", year, 1, 15);
                 AddChuxi(list, year);
                 AddQingming(list, year);
-                AddFixed(list, "劳动节", year, 5, 1);
-                AddLunar(list, "端午节", year, 5, 5);
-                AddFixed(list, "儿童节", year, 6, 1);
-                AddLunar(list, "七夕节", year, 7, 7);
-                AddLunar(list, "中秋节", year, 8, 15);
-                AddFixed(list, "国庆节", year, 10, 1);
-                AddLunar(list, "重阳节", year, 9, 9);
+                AddFixed(list, "劳动节", "Labour Day", year, 5, 1);
+                AddLunar(list, "端午节", "Dragon Boat Festival", year, 5, 5);
+                AddFixed(list, "儿童节", "Children's Day", year, 6, 1);
+                AddLunar(list, "七夕节", "Qixi Festival", year, 7, 7);
+                AddLunar(list, "中秋节", "Mid-Autumn Festival", year, 8, 15);
+                AddFixed(list, "国庆节", "National Day", year, 10, 1);
+                AddLunar(list, "重阳节", "Double Ninth Festival", year, 9, 9);
             }
 
             list.Sort((a, b) => a.Date.CompareTo(b.Date));
@@ -62,22 +62,24 @@ namespace CountTimer.Service
         /// <summary>取 today（含）起的未来节日列表，覆盖未来一整年，按日期升序</summary>
         public static List<HolidayInfo> GetUpcoming(DateTime today) => GetAround(today).Upcoming;
 
-        private static void AddFixed(List<HolidayInfo> list, string name, int year, int month, int day)
+        private static void AddFixed(List<HolidayInfo> list, string name, string nameEn, int year, int month, int day)
         {
-            list.Add(new HolidayInfo { Name = name, Date = new DateTime(year, month, day) });
+            list.Add(new HolidayInfo { Name = name, NameEn = nameEn, Date = new DateTime(year, month, day) });
         }
 
-        private static void AddLunar(List<HolidayInfo> list, string name, int lunarYear, int lunarMonth, int lunarDay)
+        private static void AddLunar(List<HolidayInfo> list, string name, string nameEn, int lunarYear, int lunarMonth, int lunarDay)
         {
             DateTime date = LunarToSolar(lunarYear, lunarMonth, lunarDay);
-            list.Add(new HolidayInfo { Name = name, Date = date, Note = LunarDescribe(date) });
+            (string zh, string en) = LunarDescribe(date);
+            list.Add(new HolidayInfo { Name = name, NameEn = nameEn, Date = date, Note = zh, NoteEn = en });
         }
 
         /// <summary>除夕 = 该农历年次年正月初一的前一天（腊月可能只有 29 天，按真实日名标注）</summary>
         private static void AddChuxi(List<HolidayInfo> list, int lunarYear)
         {
             DateTime date = LunarToSolar(lunarYear + 1, 1, 1).AddDays(-1);
-            list.Add(new HolidayInfo { Name = "除夕", Date = date, Note = LunarDescribe(date) });
+            (string zh, string en) = LunarDescribe(date);
+            list.Add(new HolidayInfo { Name = "除夕", NameEn = "Chinese New Year's Eve", Date = date, Note = zh, NoteEn = en });
         }
 
         /// <summary>农历（平月序号，非闰月）指定日 → 公历日期</summary>
@@ -90,8 +92,8 @@ namespace CountTimer.Service
             return Lunar.ToDateTime(lunarYear, monthIndex, lunarDay, 0, 0, 0, 0, ChineseLunisolarCalendar.CurrentEra);
         }
 
-        /// <summary>公历日期 → "农历X月XX日"（含闰月，取自真实历表）</summary>
-        private static string LunarDescribe(DateTime solar)
+        /// <summary>公历日期 → 农历标注（中文"农历X月XX日"，英文"Lunar M/D"，含闰月，取自真实历表）</summary>
+        private static (string Zh, string En) LunarDescribe(DateTime solar)
         {
             int year = Lunar.GetYear(solar);
             int monthIndex = Lunar.GetMonth(solar);
@@ -102,7 +104,8 @@ namespace CountTimer.Service
             int month = isLeap ? leapIndex - 1 : (leapIndex > 0 && monthIndex > leapIndex ? monthIndex - 1 : monthIndex);
 
             string monthName = (isLeap ? "闰" : "") + LunarMonthNames[month - 1] + "月";
-            return $"农历{monthName}{LunarDayName(day)}";
+            string leapPrefix = isLeap ? "leap " : "";
+            return ($"农历{monthName}{LunarDayName(day)}", $"Lunar {leapPrefix}{month}/{day}");
         }
 
         private static string LunarDayName(int day)
@@ -143,7 +146,7 @@ namespace CountTimer.Service
             }
 
             DateTime beijing = FromJulianDay((lo + hi) / 2).AddHours(8);
-            list.Add(new HolidayInfo { Name = "清明节", Date = beijing.Date, Note = "节气" });
+            list.Add(new HolidayInfo { Name = "清明节", NameEn = "Qingming Festival", Date = beijing.Date, Note = "节气", NoteEn = "Solar term" });
         }
 
         /// <summary>太阳黄经尚未到达 target（差值落在 -180°~180° 内为正）</summary>

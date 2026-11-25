@@ -85,6 +85,12 @@ namespace CountTimer.View
             list.SetItems(entries);
         }
 
+        /// <summary>语言切换后整页重算（节日名/农历标注/倒计时文案全部重建）</summary>
+        public void ApplyLanguage()
+        {
+            Rebuild(computedDate);
+        }
+
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);

@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Model;
+using CountTimer.Share;
 
 namespace CountTimer.View
 {
@@ -53,7 +54,7 @@ namespace CountTimer.View
             items.Clear();
             foreach (var (holiday, days) in entries)
             {
-                items.Add(new Item(holiday.Name, HolidayHero.FormatDate(holiday), days == 0 ? "就是今天" : $"还有 {days} 天"));
+                items.Add(new Item(holiday.DisplayName, HolidayHero.FormatDate(holiday), days == 0 ? I18n.T("就是今天", "Today") : I18n.F("还有 {0} 天", "{0} days to go", days)));
             }
             ClampScroll();
             Invalidate();

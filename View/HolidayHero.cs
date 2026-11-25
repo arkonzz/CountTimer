@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using CountTimer.Model;
+using CountTimer.Share;
 
 namespace CountTimer.View
 {
@@ -55,26 +56,35 @@ namespace CountTimer.View
             int width = ClientSize.Width;
 
             // 左上：节日名 + 日期行；右上：大号倒计时（不与底部进度说明重叠）
-            TextRenderer.DrawText(g, holiday.Name, fontName, new Point(SidePad, 12), UiTheme.TextMain);
+            TextRenderer.DrawText(g, holiday.DisplayName, fontName, new Point(SidePad, 12), UiTheme.TextMain);
             TextRenderer.DrawText(g, FormatDate(holiday), fontDate, new Point(SidePad, 52), UiTheme.TextSub);
             DrawCountdown(g, width);
             DrawProgress(g, width);
         }
 
-        /// <summary>日期行文本：yyyy年MM月dd日 周X（· 农历/节气标注）——列表跨年，必须带年份</summary>
+        private static readonly string[] WeekdayEn = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
+
+        /// <summary>日期行文本（带年份，列表跨年必须区分）：yyyy年MM月dd日 周X / yyyy-MM-dd Fri（· 农历/节气标注）</summary>
         public static string FormatDate(HolidayInfo holiday)
         {
-            string weekday = "周" + "日一二三四五六"[(int)holiday.Date.DayOfWeek];
-            return holiday.Note is null
-                ? $"{holiday.Date:yyyy年MM月dd日} {weekday}"
-                : $"{holiday.Date:yyyy年MM月dd日} {weekday} · {holiday.Note}";
+            if (I18n.IsEnglish)
+            {
+                string weekday = WeekdayEn[(int)holiday.Date.DayOfWeek];
+                string date = holiday.Date.ToString("yyyy-MM-dd");
+                return holiday.DisplayNote is null ? $"{date} {weekday}" : $"{date} {weekday} · {holiday.DisplayNote}";
+            }
+
+            string weekdayZh = "周" + "日一二三四五六"[(int)holiday.Date.DayOfWeek];
+            return holiday.DisplayNote is null
+                ? $"{holiday.Date:yyyy年MM月dd日} {weekdayZh}"
+                : $"{holiday.Date:yyyy年MM月dd日} {weekdayZh} · {holiday.DisplayNote}";
         }
 
         private void DrawCountdown(Graphics g, int width)
         {
             if (daysLeft <= 1)
             {
-                string text = daysLeft == 0 ? "今天" : "明天";
+                string text = daysLeft == 0 ? I18n.T("今天", "Today") : I18n.T("明天", "Tomorrow");
                 var size = TextRenderer.MeasureText(g, text, fontToday);
                 TextRenderer.DrawText(g, text, fontToday, new Point(width - SidePad - size.Width, 16), UiTheme.HolidayAccent);
                 return;
@@ -82,10 +92,10 @@ namespace CountTimer.View
 
             string number = daysLeft.ToString();
             var numSize = TextRenderer.MeasureText(g, number, fontDays);
-            var unitSize = TextRenderer.MeasureText(g, "天", fontDaysUnit);
+            var unitSize = TextRenderer.MeasureText(g, I18n.T("天", "days"), fontDaysUnit);
             int x = width - SidePad - numSize.Width - unitSize.Width + 4;
             TextRenderer.DrawText(g, number, fontDays, new Point(x, 10), UiTheme.HolidayAccent, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "天", fontDaysUnit,
+            TextRenderer.DrawText(g, I18n.T("天", "days"), fontDaysUnit,
                 new Point(x + numSize.Width - 6, 10 + numSize.Height - unitSize.Height - 10),
                 UiTheme.TextSub, TextFormatFlags.NoPadding);
         }
@@ -99,7 +109,7 @@ namespace CountTimer.View
             string caption;
             if (daysLeft == 0)
             {
-                caption = "就是今天";
+                caption = I18n.T("就是今天", "It's today");
             }
             else if (previous is null)
             {
@@ -111,7 +121,7 @@ namespace CountTimer.View
                 int span = (holiday!.Date.Date - previous.Date.Date).Days;
                 int elapsed = Math.Clamp((DateTime.Today - previous.Date.Date).Days, 0, span);
                 ratio = span <= 0 ? 1 : (double)elapsed / span;
-                caption = $"{previous.Name}以来已过 {Math.Round(ratio * 100)}%";
+                caption = I18n.F("{0}以来已过 {1}%", "{1}% since {0}", previous.DisplayName, Math.Round(ratio * 100));
             }
 
             var track = new Rectangle(SidePad, barY, barWidth, BarHeight);

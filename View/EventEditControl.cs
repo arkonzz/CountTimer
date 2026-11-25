@@ -5,6 +5,7 @@ using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
 using CountTimer.Service.ServiceImpl;
+using CountTimer.Share;
 
 namespace CountTimer.View
 {
@@ -37,55 +38,47 @@ namespace CountTimer.View
             BackColor = UiTheme.PageBg;
             BuildUi();
             this.AddListener();
+            ApplyLanguage();
         }
 
         private void BuildUi()
         {
-            lblTitle.Text = "新增事件";
             lblTitle.Font = new Font("Microsoft YaHei UI", 12F, FontStyle.Bold);
             lblTitle.ForeColor = UiTheme.TextMain;
             lblTitle.Location = new Point(16, 12);
             lblTitle.Size = new Size(200, 28);
             Controls.Add(lblTitle);
 
-            lblContent.Text = "事件内容";
             lblContent.Location = new Point(16, 56);
             lblContent.Size = new Size(72, 30);
             lblContent.TextAlign = ContentAlignment.MiddleRight;
             Controls.Add(lblContent);
 
-            input_info.PlaceholderText = "请输入内容";
             input_info.Location = new Point(96, 52);
             input_info.Size = new Size(296, 40);
             Controls.Add(input_info);
 
-            lblTime.Text = "事件时间";
             lblTime.Location = new Point(16, 108);
             lblTime.Size = new Size(72, 30);
             lblTime.TextAlign = ContentAlignment.MiddleRight;
             Controls.Add(lblTime);
 
             dp_endtime.Format = DateTimeFormat;
-            dp_endtime.PlaceholderText = "请选择时间";
             dp_endtime.Location = new Point(96, 104);
             dp_endtime.Size = new Size(296, 40);
             dp_endtime.Value = DateTime.Now;
             Controls.Add(dp_endtime);
 
-            lblRegular.Text = "每日循环";
             lblRegular.Location = new Point(16, 160);
             lblRegular.Size = new Size(72, 30);
             lblRegular.TextAlign = ContentAlignment.MiddleRight;
             Controls.Add(lblRegular);
 
-            select_regular.Items.AddRange(new object[] { "是", "否" });
             select_regular.List = true;
-            select_regular.PlaceholderText = "是否每日循环";
             select_regular.Location = new Point(96, 156);
             select_regular.Size = new Size(296, 40);
             Controls.Add(select_regular);
 
-            btn_close.Text = "取消";
             btn_close.Ghost = true;
             btn_close.BorderWidth = 1F;
             btn_close.Location = new Point(204, 212);
@@ -93,7 +86,6 @@ namespace CountTimer.View
             btn_close.Click += btn_close_Click;
             Controls.Add(btn_close);
 
-            btn_save.Text = "新增";
             btn_save.Type = AntdUI.TTypeMini.Primary;
             btn_save.Location = new Point(304, 212);
             btn_save.Size = new Size(88, 40);
@@ -101,23 +93,43 @@ namespace CountTimer.View
             Controls.Add(btn_save);
         }
 
+        /// <summary>语言切换/初始化：重刷静态文案（下拉项重建并保持选中态）</summary>
+        public void ApplyLanguage()
+        {
+            lblTitle.Text = _isEditMode ? I18n.T("编辑事件", "Edit event") : I18n.T("新增事件", "Add event");
+            lblContent.Text = I18n.T("事件内容", "Content");
+            input_info.PlaceholderText = I18n.T("请输入内容", "Enter content");
+            lblTime.Text = I18n.T("事件时间", "Time");
+            dp_endtime.PlaceholderText = I18n.T("请选择时间", "Pick a time");
+            lblRegular.Text = I18n.T("每日循环", "Daily");
+
+            int regularIndex = select_regular.SelectedIndex;
+            select_regular.Items.Clear();
+            select_regular.Items.AddRange(new object[] { I18n.T("是", "Yes"), I18n.T("否", "No") });
+            select_regular.SelectedIndex = regularIndex;
+            select_regular.PlaceholderText = I18n.T("是否每日循环", "Repeats daily?");
+
+            btn_close.Text = I18n.T("取消", "Cancel");
+            btn_save.Text = _isEditMode ? I18n.T("保存", "Save") : I18n.T("新增", "Add");
+        }
+
         public void PrepareAddEvent()
         {
             _isEditMode = false;
             _editThing = null;
-            lblTitle.Text = "新增事件";
+            lblTitle.Text = I18n.T("新增事件", "Add event");
             input_info.Text = "";
             dp_endtime.MinDate = DateTime.Now;
             dp_endtime.Value = DateTime.Now;
             select_regular.SelectedIndex = -1;
-            btn_save.Text = "新增";
+            btn_save.Text = I18n.T("新增", "Add");
         }
 
         public void SetEditEvent(ToDoThing thing)
         {
             _isEditMode = true;
             _editThing = thing;
-            lblTitle.Text = "编辑事件";
+            lblTitle.Text = I18n.T("编辑事件", "Edit event");
             input_info.Text = thing.toDoInfo;
             dp_endtime.MinDate = DateTime.MinValue;
             if (DateTime.TryParse(thing.endTime, out DateTime endTime))
@@ -127,11 +139,11 @@ namespace CountTimer.View
             else
             {
                 dp_endtime.Value = DateTime.Now;
-                AntdUI.Message.warn(FindForm()!, "事件时间格式异常，请重新选择", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("事件时间格式异常，请重新选择", "Invalid event time — pick again"), autoClose: 2);
             }
 
             select_regular.SelectedIndex = thing.isRegular ? 0 : 1;
-            btn_save.Text = "保存";
+            btn_save.Text = I18n.T("保存", "Save");
         }
 
         private void btn_close_Click(object? sender, EventArgs e)
@@ -144,20 +156,20 @@ namespace CountTimer.View
             string toDoInfo = input_info.Text.Trim();
             if (toDoInfo.Length == 0 || select_regular.SelectedIndex < 0)
             {
-                AntdUI.Message.warn(FindForm()!, "请补充内容", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请补充内容", "Please fill in the content"), autoClose: 2);
                 return;
             }
 
             if (!DateTime.TryParse(dp_endtime.Text, out DateTime endTime))
             {
-                AntdUI.Message.warn(FindForm()!, "请选择有效时间", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请选择有效时间", "Please pick a valid time"), autoClose: 2);
                 return;
             }
 
             bool isRegular = select_regular.SelectedIndex == 0;
             if (!isRegular && endTime <= DateTime.Now)
             {
-                AntdUI.Message.warn(FindForm()!, "普通事件时间必须晚于当前时间", autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("普通事件时间必须晚于当前时间", "One-off events must be set in the future"), autoClose: 2);
                 return;
             }
 
@@ -168,7 +180,7 @@ namespace CountTimer.View
             {
                 if (_editThing == null)
                 {
-                    AntdUI.Message.error(FindForm()!, "编辑数据异常", autoClose: 2);
+                    AntdUI.Message.error(FindForm()!, I18n.T("编辑数据异常", "Unexpected edit state"), autoClose: 2);
                     PrepareAddEvent();
                     return;
                 }
@@ -178,13 +190,13 @@ namespace CountTimer.View
                 _editThing.isRegular = isRegular;
                 if (service.UpdateToDoThing(_editThing) > 0)
                 {
-                    AntdUI.Message.success(FindForm()!, "修改成功", autoClose: 1);
+                    AntdUI.Message.success(FindForm()!, I18n.T("修改成功", "Saved"), autoClose: 1);
                     DataUpdated?.Invoke();
                     CloseDrawer();
                 }
                 else
                 {
-                    AntdUI.Message.error(FindForm()!, "修改失败", autoClose: 2);
+                    AntdUI.Message.error(FindForm()!, I18n.T("修改失败", "Save failed"), autoClose: 2);
                 }
                 return;
             }
@@ -199,13 +211,13 @@ namespace CountTimer.View
 
             if (service.AddToDoThing(toDoThing) > 0)
             {
-                AntdUI.Message.success(FindForm()!, "新增成功", autoClose: 1);
+                AntdUI.Message.success(FindForm()!, I18n.T("新增成功", "Added"), autoClose: 1);
                 DataUpdated?.Invoke();
                 CloseDrawer();
             }
             else
             {
-                AntdUI.Message.error(FindForm()!, "新增失败", autoClose: 2);
+                AntdUI.Message.error(FindForm()!, I18n.T("新增失败", "Add failed"), autoClose: 2);
             }
         }
 

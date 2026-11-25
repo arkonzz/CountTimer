@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Service;
+using CountTimer.Share;
 using CountTimer.View;
 
 namespace CountTimer
@@ -17,9 +18,11 @@ namespace CountTimer
 
         public MainForm()
         {
-            // 尽早应用已保存的主题，避免启动时闪白（AntdUI 控件与自绘控件均跟随此配置）
-            bool darkMode = settingsService.Load().DarkMode;
+            // 尽早应用已保存的主题与语言，避免启动时闪白（AntdUI 控件与自绘控件均跟随此配置）
+            var savedSettings = settingsService.Load();
+            bool darkMode = savedSettings.DarkMode;
             AntdUI.Config.Mode = darkMode ? TMode.Dark : TMode.Light;
+            I18n.Init(savedSettings.Language == "en" ? AppLanguage.English : AppLanguage.Chinese);
 
             InitializeComponent();
             this.TopMost = true;
@@ -35,7 +38,27 @@ namespace CountTimer
             tabHoliday.Controls.Add(holidayControl);
 
             ApplyContainerTheme();
+            I18n.Changed += ApplyLanguage;
+            ApplyLanguage();
             this.AddListener();
+        }
+
+        /// <summary>语言切换：窗体自身文案（标题/页签/托盘/菜单）+ 各页签 ApplyLanguage</summary>
+        private void ApplyLanguage()
+        {
+            string title = I18n.T("番茄倒计时", "Pomodoro Countdown");
+            Text = title;
+            pageHeader1.Text = title;
+            notifyIcon_cd.Text = title;
+            tabPomodoro.Text = I18n.T("番茄钟", "Pomodoro");
+            tabMemo.Text = I18n.T("小计", "Notes");
+            tabHoliday.Text = I18n.T("节假日", "Holidays");
+            showWindowToolStripMenuItem.Text = I18n.T("显示主界面", "Show");
+            exitToolStripMenuItem.Text = I18n.T("退出", "Exit");
+
+            pomodoroControl?.ApplyLanguage();
+            memoControl?.ApplyLanguage();
+            holidayControl?.ApplyLanguage();
         }
 
         /// <summary>
