@@ -58,6 +58,12 @@ namespace CountTimer.View
         private readonly AntdUI.Button btnEditEvent = new AntdUI.Button();
         private readonly AntdUI.Button btnDelEvent = new AntdUI.Button();
         private readonly AntdUI.Label lblEvent = new AntdUI.Label();
+        // 统计行：近 7 天趋势小图 + 今日统计文字（悬停小图时文字改为显示那一天的数值）
+        private readonly FocusTrendControl trend = new();
+        private readonly int[] weekCounts = new int[FocusTrendControl.Days];
+        private string statsText = string.Empty;
+        // 统计行的纵坐标由主区域布局算出，文字内容变化重排时复用
+        private int statsRowY;
         private readonly AntdUI.InputNumber numFocus = new AntdUI.InputNumber();
         private readonly AntdUI.InputNumber numShortBreak = new AntdUI.InputNumber();
         private readonly AntdUI.InputNumber numLongBreak = new AntdUI.InputNumber();
@@ -219,8 +225,12 @@ namespace CountTimer.View
             lblStats.Font = new Font("Microsoft YaHei UI", 10.5F);
             lblStats.ForeColor = UiTheme.TextSub;
             lblStats.Size = new Size(360, 26);
-            lblStats.TextAlign = ContentAlignment.MiddleCenter;
+            lblStats.TextAlign = ContentAlignment.MiddleLeft;
+            // 单行显示：宽度按实测文字给足，任何情况下都不能折行把这一行撑高
+            lblStats.TextMultiLine = false;
             Controls.Add(lblStats);
+            trend.HoverChanged += Trend_HoverChanged;
+            Controls.Add(trend);
 
             BuildSettingsArea();
         }
@@ -375,11 +385,22 @@ namespace CountTimer.View
             btnDelEvent.Location = new Point(btnEditEvent.Right + 10, y);
             lblEvent.Location = new Point(btnDelEvent.Right + 10, y);
 
-            lblStats.Location = new Point(Math.Max(4, centerX - lblStats.Width / 2), y + 44 + 12);
+            statsRowY = y + 44 + 12;
+            LayoutStats(centerX, statsRowY);
 
             // 布局后强制全量重绘：控件"只移动不变尺寸"时 WinForms 会走位图平移而不重绘，
             // 圆环等自绘控件会留下移动残影（弧线碎片）
             Invalidate(true);
+        }
+
+        /// <summary>统计行：趋势小图 + 文字，整体水平居中；文字宽度随内容变化</summary>
+        private void LayoutStats(int centerX, int y)
+        {
+            // 文字宽度之外留出控件内边距，避免最长的一句在末尾折行
+            lblStats.Size = new Size(TextRenderer.MeasureText(lblStats.Text, lblStats.Font).Width + 16, 26);
+            int startX = Math.Max(4, centerX - (trend.Width + 10 + lblStats.Width) / 2);
+            trend.Location = new Point(startX, y - 1);
+            lblStats.Location = new Point(startX + trend.Width + 10, y);
         }
 
         /// <summary>设置卡片内部布局：首行标题/语言/快捷键/保存，其余为 4 列网格</summary>
@@ -1135,7 +1156,40 @@ namespace CountTimer.View
         {
             int count = sessionService.GetTodayCount();
             int minutes = sessionService.GetTodayMinutes();
-            lblStats.Text = I18n.F("今日 {0} 个番茄 · {1} 分钟专注", "{0} pomodoros today · {1} min focused", count, minutes);
+
+            // 近 7 天每天完成的次数，从 6 天前排到今天
+            Dictionary<string, int> daily = sessionService.GetDailyCounts(FocusTrendControl.Days);
+            for (int i = 0; i < weekCounts.Length; i++)
+            {
+                weekCounts[i] = daily.GetValueOrDefault(DateTime.Today.AddDays(i - (weekCounts.Length - 1)).ToString("yyyy-MM-dd"));
+            }
+
+            statsText = I18n.F(
+                "今日 {0} 个番茄 · {1} 分钟专注 · 近 7 天 {2} 个",
+                "Today {0} pomodoros · {1} min focused · {2} in the last 7 days",
+                count, minutes, weekCounts.Sum());
+            trend.SetCounts(weekCounts);
+            lblStats.Text = statsText;
+            LayoutStats(ClientSize.Width / 2, statsRowY);
+        }
+
+        /// <summary>悬停趋势小图：文字改为显示那一天的数值，移开恢复今日统计</summary>
+        private void Trend_HoverChanged(int index)
+        {
+            if (index < 0)
+            {
+                lblStats.Text = statsText;
+            }
+            else
+            {
+                DateTime day = DateTime.Today.AddDays(index - (weekCounts.Length - 1));
+                string weekday = I18n.IsEnglish
+                    ? day.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)
+                    : "周" + "日一二三四五六"[(int)day.DayOfWeek];
+                lblStats.Text = I18n.F("{0}（{1:M月d日}）· {2} 个番茄", "{0}, {1:M/d} · {2} pomodoros", weekday, day, weekCounts[index]);
+            }
+
+            LayoutStats(ClientSize.Width / 2, statsRowY);
         }
 
         protected override void Dispose(bool disposing)
