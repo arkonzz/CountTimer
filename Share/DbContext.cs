@@ -7,7 +7,7 @@ namespace CountTimer.Share
 {
     public class DbContext<T> where T : class, new()
     {
-        private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "Db", "ToDoDb.db");
+        private static readonly string FilePath = AppData.DbPath;
 
         //注意：不能写成静态的
         public SqlSugarClient Db { get; }//用来处理事务多表查询和复杂的操作

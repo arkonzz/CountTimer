@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using CountTimer.Model;
+using CountTimer.Share;
 
 namespace CountTimer.Service
 {
@@ -10,7 +11,7 @@ namespace CountTimer.Service
     /// </summary>
     public class AppSettingsService
     {
-        private static readonly string FilePath = Path.Combine(AppContext.BaseDirectory, "Db", "settings.json");
+        private static readonly string FilePath = AppData.SettingsPath;
 
         private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {

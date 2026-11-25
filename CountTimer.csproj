@@ -37,13 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Db\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Db\ToDoDb.db">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
+    <InternalsVisibleTo Include="CountTimer.Tests" />
   </ItemGroup>
 
 </Project>
