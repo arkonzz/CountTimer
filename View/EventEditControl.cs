@@ -101,17 +101,25 @@ namespace CountTimer.View
             input_info.PlaceholderText = I18n.T("请输入内容", "Enter content");
             lblTime.Text = I18n.T("事件时间", "Time");
             dp_endtime.PlaceholderText = I18n.T("请选择时间", "Pick a time");
-            lblRegular.Text = I18n.T("每日循环", "Daily");
+            lblRegular.Text = I18n.T("重复", "Repeats");
 
-            int regularIndex = select_regular.SelectedIndex;
+            int repeatIndex = select_regular.SelectedIndex;
             select_regular.Items.Clear();
-            select_regular.Items.AddRange(new object[] { I18n.T("是", "Yes"), I18n.T("否", "No") });
-            select_regular.SelectedIndex = regularIndex;
-            select_regular.PlaceholderText = I18n.T("是否每日循环", "Repeats daily?");
+            select_regular.Items.AddRange(RepeatOptionTexts());
+            select_regular.SelectedIndex = repeatIndex;
 
             btn_close.Text = I18n.T("取消", "Cancel");
             btn_save.Text = _isEditMode ? I18n.T("保存", "Save") : I18n.T("新增", "Add");
         }
+
+        /// <summary>下拉序号即 RepeatKind 的数值：不重复 / 每天 / 工作日 / 每周</summary>
+        private static object[] RepeatOptionTexts() =>
+        [
+            I18n.T("不重复", "Never"),
+            I18n.T("每天", "Daily"),
+            I18n.T("工作日", "Weekdays"),
+            I18n.T("每周（同所选时间的星期）", "Weekly (same weekday)"),
+        ];
 
         public void PrepareAddEvent()
         {
@@ -121,7 +129,7 @@ namespace CountTimer.View
             input_info.Text = "";
             dp_endtime.MinDate = DateTime.Now;
             dp_endtime.Value = DateTime.Now;
-            select_regular.SelectedIndex = -1;
+            select_regular.SelectedIndex = 0;
             btn_save.Text = I18n.T("新增", "Add");
         }
 
@@ -142,7 +150,7 @@ namespace CountTimer.View
                 AntdUI.Message.warn(FindForm()!, I18n.T("事件时间格式异常，请重新选择", "Invalid event time — pick again"), autoClose: 2);
             }
 
-            select_regular.SelectedIndex = thing.isRegular ? 0 : 1;
+            select_regular.SelectedIndex = (int)thing.Kind;
             btn_save.Text = I18n.T("保存", "Save");
         }
 
@@ -154,9 +162,9 @@ namespace CountTimer.View
         private void btn_save_Click(object? sender, EventArgs e)
         {
             string toDoInfo = input_info.Text.Trim();
-            if (toDoInfo.Length == 0 || select_regular.SelectedIndex < 0)
+            if (toDoInfo.Length == 0)
             {
-                AntdUI.Message.warn(FindForm()!, I18n.T("请补充内容", "Please fill in the content"), autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("请输入内容", "Please enter the content"), autoClose: 2);
                 return;
             }
 
@@ -166,15 +174,19 @@ namespace CountTimer.View
                 return;
             }
 
-            bool isRegular = select_regular.SelectedIndex == 0;
-            if (!isRegular && endTime <= DateTime.Now)
+            // 下拉序号即 RepeatKind 的数值
+            var kind = (RepeatKind)Math.Clamp(select_regular.SelectedIndex, 0, (int)RepeatKind.Weekly);
+            if (kind == RepeatKind.None && endTime <= DateTime.Now)
             {
-                AntdUI.Message.warn(FindForm()!, I18n.T("普通事件时间必须晚于当前时间", "One-off events must be set in the future"), autoClose: 2);
+                AntdUI.Message.warn(FindForm()!, I18n.T("事件时间必须晚于当前时间", "Time must be later than now"), autoClose: 2);
                 return;
             }
 
-            endTime = NormalizeEndTime(endTime, isRegular);
-            string endTimeText = endTime.ToString(DateTimeFormat);
+            // 重复事件从所选时间起算下一次：每周取所选日期的星期，时间取所选时刻
+            if (kind != RepeatKind.None)
+            {
+                endTime = RepeatRule.Next(kind, (int)endTime.DayOfWeek, endTime.TimeOfDay, DateTime.Now);
+            }
 
             if (_isEditMode)
             {
@@ -185,9 +197,7 @@ namespace CountTimer.View
                     return;
                 }
 
-                _editThing.toDoInfo = toDoInfo;
-                _editThing.endTime = endTimeText;
-                _editThing.isRegular = isRegular;
+                ApplyFields(_editThing, toDoInfo, kind, endTime);
                 if (service.UpdateToDoThing(_editThing) > 0)
                 {
                     AntdUI.Message.success(FindForm()!, I18n.T("修改成功", "Saved"), autoClose: 1);
@@ -201,13 +211,8 @@ namespace CountTimer.View
                 return;
             }
 
-            var toDoThing = new ToDoThing
-            {
-                toDoInfo = toDoInfo,
-                isMailed = false,
-                endTime = endTimeText,
-                isRegular = isRegular
-            };
+            var toDoThing = new ToDoThing { isMailed = false };
+            ApplyFields(toDoThing, toDoInfo, kind, endTime);
 
             if (service.AddToDoThing(toDoThing) > 0)
             {
@@ -221,30 +226,23 @@ namespace CountTimer.View
             }
         }
 
+        /// <summary>isRegular 是"是否重复"的旧字段，保留给原有查询用；具体方式写在 repeatKind</summary>
+        private static void ApplyFields(ToDoThing thing, string toDoInfo, RepeatKind kind, DateTime endTime)
+        {
+            thing.toDoInfo = toDoInfo;
+            thing.endTime = endTime.ToString(DateTimeFormat);
+            thing.isRegular = kind != RepeatKind.None;
+            thing.repeatKind = (int)kind;
+            thing.repeatDay = (int)endTime.DayOfWeek;
+        }
+
         /// <summary>
         /// 关闭抽屉：内容控件的宿主只是内部容器，需要关闭 AntdUI 的抽屉层窗体
         /// （LayeredFormDrawer 关闭时会带走遮罩层）
         /// </summary>
         internal void CloseDrawer()
         {
-            foreach (Form form in Application.OpenForms.Cast<Form>().ToList())
-            {
-                if (form.GetType().Name.Contains("LayeredFormDrawer"))
-                {
-                    form.Close();
-                }
-            }
-        }
-
-        private static DateTime NormalizeEndTime(DateTime endTime, bool isRegular)
-        {
-            if (!isRegular || endTime > DateTime.Now)
-            {
-                return endTime;
-            }
-
-            DateTime nextOccurrence = DateTime.Today.Add(endTime.TimeOfDay);
-            return nextOccurrence > DateTime.Now ? nextOccurrence : nextOccurrence.AddDays(1);
+            DrawerHelper.CloseOpenDrawers();
         }
 
         public void HandleEvent(AntdUI.EventType id, object? tag)

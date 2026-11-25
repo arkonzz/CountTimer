@@ -32,16 +32,32 @@ WHERE is_regular = 0 AND datetime(end_time) < datetime(@endTime)";
 
             return Db.Ado.ExecuteCommand(sql, new SugarParameter("@endTime", endTime));
         }
+        /// <summary>把已经过去的循环事件滚到下一次发生（每天 / 工作日 / 每周各自的规则）</summary>
         public int updateRegularEvent()
         {
-            const string sql = @"UPDATE to_do_list
-SET end_time = CASE
-    WHEN time(end_time) <= time('now', 'localtime')
-        THEN datetime(date('now', 'localtime', '+1 day') || ' ' || time(end_time))
-    ELSE datetime(date('now', 'localtime') || ' ' || time(end_time))
-END
-WHERE is_regular = 1 AND datetime(end_time) < datetime('now', 'localtime')";
-            return Db.Ado.ExecuteCommand(sql);
+            int updated = 0;
+            DateTime now = DateTime.Now;
+            foreach (ToDoThing toDoThing in GetTodoList())
+            {
+                if (toDoThing.Kind == RepeatKind.None
+                    || !DateTime.TryParse(toDoThing.endTime, out DateTime endTime)
+                    || endTime > now)
+                {
+                    continue;
+                }
+
+                string next = RepeatRule.Next(toDoThing.Kind, toDoThing.repeatDay, endTime.TimeOfDay, now).ToString(DateTimeFormat);
+                if (next == toDoThing.endTime)
+                {
+                    continue;
+                }
+
+                toDoThing.endTime = next;
+                toDoThing.isRegular = true;
+                updated += Db.Updateable(toDoThing).ExecuteCommand();
+            }
+
+            return updated;
         }
 
         public int deleteById(int id)

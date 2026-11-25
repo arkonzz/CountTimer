@@ -20,6 +20,10 @@ namespace CountTimer.Service
         private readonly Timer _timer = new Timer { Interval = CountdownIntervalMilliseconds };
         private DateTime _targetTime;
         private ToDoThing? _currentTodo;
+        private volatile int _currentId;
+
+        /// <summary>倒计时正在跟随的事件 Id，0 表示未在计时。后台线程也会读，所以用 volatile</summary>
+        public int CurrentId => _currentId;
 
         public CountdownController()
         {
@@ -44,6 +48,7 @@ namespace CountTimer.Service
             }
 
             _currentTodo = toDoThing;
+            _currentId = toDoThing.Id;
             _timer.Start();
             return CountdownStartStatus.Started;
         }
@@ -51,6 +56,7 @@ namespace CountTimer.Service
         public void Stop()
         {
             _timer.Stop();
+            _currentId = 0;
         }
 
         private void Timer_Tick(object? sender, EventArgs e)
