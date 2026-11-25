@@ -53,13 +53,19 @@ namespace CountTimer.Service
         /// <summary>
         /// 防止配置文件被改出非法值
         /// </summary>
-        private static AppSettings Normalize(AppSettings settings)
+        internal static AppSettings Normalize(AppSettings settings)
         {
             settings.FocusMinutes = Math.Clamp(settings.FocusMinutes, 1, 240);
             settings.ShortBreakMinutes = Math.Clamp(settings.ShortBreakMinutes, 1, 120);
             settings.LongBreakMinutes = Math.Clamp(settings.LongBreakMinutes, 1, 180);
             settings.RoundsBeforeLongBreak = Math.Clamp(settings.RoundsBeforeLongBreak, 1, 12);
             settings.Language = settings.Language == "en" ? "en" : "zh";
+            // 存坏的快捷键直接关闭，避免启动时按残缺的组合去注册
+            if (settings.Hotkey.Length > 0 && (!Hotkey.TryParse(settings.Hotkey, out Hotkey hotkey) || !hotkey.IsValid))
+            {
+                settings.Hotkey = string.Empty;
+            }
+
             return settings;
         }
     }

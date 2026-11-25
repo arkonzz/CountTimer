@@ -23,7 +23,7 @@ namespace CountTimer.View
         private static readonly TimeSpan DuplicateNotificationWindow = TimeSpan.FromSeconds(10);
 
         // 设置卡片区（外层包装 + 内层卡片）总占用高度
-        private const int SettingsWrapperHeight = 172;
+        private const int SettingsWrapperHeight = 214;
         // 圆环下方元素：操作行(44) + 间距(10) + 事件行(44) + 间距(12) + 统计(26) + 余量(6)
         private const int BelowRingHeight = 44 + 10 + 44 + 12 + 26 + 6;
 
@@ -34,6 +34,7 @@ namespace CountTimer.View
         private readonly AppSettingsService settingsService = new AppSettingsService();
         private readonly FocusSessionService sessionService = new FocusSessionServiceImpl();
         private readonly Action<string, string> showBalloon;
+        // 与主窗体共用同一个配置对象：两边都会保存，各持一份会互相覆盖
         private AppSettings settings;
         private List<ToDoThing> toDoThings = [];
 
@@ -65,6 +66,9 @@ namespace CountTimer.View
         private readonly AntdUI.Switch switchAutoFocus = new AntdUI.Switch();
         private readonly AntdUI.Switch switchSound = new AntdUI.Switch();
         private readonly AntdUI.Switch switchDark = new AntdUI.Switch();
+        private readonly AntdUI.Switch switchTopMost = new AntdUI.Switch();
+        private readonly AntdUI.Switch switchAutostart = new AntdUI.Switch();
+        private readonly AntdUI.Switch switchTrayTime = new AntdUI.Switch();
         private readonly AntdUI.Button btnSaveSettings = new AntdUI.Button();
         private readonly AntdUI.Label lblSettingsTitle = new AntdUI.Label();
 
@@ -72,16 +76,24 @@ namespace CountTimer.View
         private readonly CardPanel settingsCard = new CardPanel();
         private readonly AntdUI.Label lblLanguage = new AntdUI.Label();
         private readonly AntdUI.Select select_lang = new AntdUI.Select();
+        private readonly AntdUI.Label lblHotkey = new AntdUI.Label();
+        private readonly AntdUI.Button btnHotkey = new AntdUI.Button();
         private readonly List<(AntdUI.Label label, AntdUI.InputNumber input)> durationFields = [];
         private readonly List<(AntdUI.Switch toggle, AntdUI.Label label)> toggleFields = [];
 
         /// <summary>主题切换请求（由主窗体统一应用）</summary>
         public event Action<bool>? ThemeChanged;
 
-        public PomodoroControl(Action<string, string> showBalloon)
+        /// <summary>托盘状态变化（界面线程）：剩余时间、是否计时中、是否已有进行中的阶段、阶段名（已按当前语言）</summary>
+        public event Action<TimeSpan, bool, bool, string>? TrayStateChanged;
+
+        /// <summary>应用级设置（置顶 / 自启 / 托盘时间 / 快捷键等）已保存，由主窗体统一应用</summary>
+        public event Action? AppSettingsChanged;
+
+        public PomodoroControl(Action<string, string> showBalloon, AppSettings sharedSettings)
         {
             this.showBalloon = showBalloon;
-            settings = settingsService.Load();
+            settings = sharedSettings;
 
             // 禁用字体自动缩放：AntdUI 容器会按字体度量对子控件做非等比缩放，把圆环纵向压扁
             AutoScaleMode = AutoScaleMode.None;
@@ -106,13 +118,17 @@ namespace CountTimer.View
             SyncPhaseUi(controller.Remaining);
             UpdateStartButton();
 
-            // 事件倒计时后台维护 + 初始化事件列表
+            // 事件倒计时后台维护 + 初始化事件列表。
+            // 一次性事件只在倒计时正跟随时才由后台兜底提醒（未选中的事件保持不提醒）
             todoService.updateRegularEvent();
-            _cleanupWorker.Start(RefreshEventsFromWorker, NotifyRegularEventFromWorker);
+            _cleanupWorker.Start(RefreshEventsFromWorker, NotifyEventFromWorker, thing => _countdownController.CurrentId == thing.Id);
             InitSelectEvent();
 
             // 初始化完成后再挂开关事件，避免程序化赋值触发保存
             switchDark.CheckedChanged += switchDark_CheckedChanged;
+            switchTopMost.CheckedChanged += switchTopMost_CheckedChanged;
+            switchAutostart.CheckedChanged += switchAutostart_CheckedChanged;
+            switchTrayTime.CheckedChanged += switchTrayTime_CheckedChanged;
         }
 
         #region 布局
@@ -256,8 +272,27 @@ namespace CountTimer.View
                 MakeToggleField(switchAutoBreak, I18n.T("自动休息", "Auto break")),
                 MakeToggleField(switchAutoFocus, I18n.T("自动专注", "Auto focus")),
                 MakeToggleField(switchSound, I18n.T("提示音", "Sound")),
-                MakeToggleField(switchDark, I18n.T("深色主题", "Dark mode"))
+                MakeToggleField(switchDark, I18n.T("深色主题", "Dark mode")),
+                // 应用级开关：改动即时生效并保存
+                MakeToggleField(switchTopMost, I18n.T("窗口置顶", "Always on top")),
+                MakeToggleField(switchAutostart, I18n.T("开机自启", "Auto start")),
+                MakeToggleField(switchTrayTime, I18n.T("托盘时间", "Tray time"))
             ]);
+
+            // 全局快捷键：按钮上显示当前组合，点击后按下新的组合（Esc 取消，Backspace/Delete 清除）
+            lblHotkey.Text = I18n.T("快捷键", "Hotkey");
+            lblHotkey.Font = new Font("Microsoft YaHei UI", 9.5F);
+            lblHotkey.ForeColor = UiTheme.TextSub;
+            lblHotkey.Size = new Size(56, 24);
+            lblHotkey.TextAlign = ContentAlignment.MiddleLeft;
+            settingsCard.Controls.Add(lblHotkey);
+
+            btnHotkey.Ghost = true;
+            btnHotkey.BorderWidth = 1F;
+            btnHotkey.Size = new Size(110, 30);
+            btnHotkey.Click += btnHotkey_Click;
+            settingsCard.Controls.Add(btnHotkey);
+            RefreshHotkeyText();
 
             btnSaveSettings.Text = I18n.T("保存设置", "Save");
             btnSaveSettings.Type = AntdUI.TTypeMini.Primary;
@@ -347,7 +382,7 @@ namespace CountTimer.View
             Invalidate(true);
         }
 
-        /// <summary>设置卡片内部布局：4 列网格</summary>
+        /// <summary>设置卡片内部布局：首行标题/语言/快捷键/保存，其余为 4 列网格</summary>
         private void SettingsCard_Layout(object? sender, LayoutEventArgs e)
         {
             int innerX = 20;
@@ -359,6 +394,11 @@ namespace CountTimer.View
             select_lang.Location = new Point(lblLanguage.Right + 6, 6);
             btnSaveSettings.Location = new Point(settingsCard.Width - 20 - btnSaveSettings.Width, 6);
 
+            // 快捷键紧靠保存按钮左侧，按钮宽度随组合文字变化
+            btnHotkey.Size = new Size(Math.Max(96, TextRenderer.MeasureText(btnHotkey.Text, btnHotkey.Font).Width + 24), 30);
+            lblHotkey.Location = new Point(btnSaveSettings.Left - 16 - btnHotkey.Width - 6 - lblHotkey.Width, 12);
+            btnHotkey.Location = new Point(lblHotkey.Right + 6, 6);
+
             for (int i = 0; i < durationFields.Count; i++)
             {
                 int columnCenter = innerX + i * columnWidth + columnWidth / 2;
@@ -369,12 +409,14 @@ namespace CountTimer.View
 
             for (int i = 0; i < toggleFields.Count; i++)
             {
-                int columnCenter = innerX + i * columnWidth + columnWidth / 2;
+                int row = i / 4, column = i % 4;
+                int columnCenter = innerX + column * columnWidth + columnWidth / 2;
                 var (toggle, label) = toggleFields[i];
                 int groupWidth = toggle.Width + 8 + label.Width;
-                int x = columnCenter - groupWidth / 2;
-                toggle.Location = new Point(x, 114);
-                label.Location = new Point(x + toggle.Width + 8, 114);
+                int x = Math.Max(innerX, Math.Min(columnCenter - groupWidth / 2, settingsCard.Width - innerX - groupWidth));
+                int y = 114 + row * 36;
+                toggle.Location = new Point(x, y);
+                label.Location = new Point(x + toggle.Width + 8, y);
             }
         }
 
@@ -414,6 +456,71 @@ namespace CountTimer.View
             ThemeChanged?.Invoke(settings.DarkMode);
         }
 
+        private void switchTopMost_CheckedChanged(object sender, AntdUI.BoolEventArgs e)
+        {
+            settings.AlwaysOnTop = switchTopMost.Checked;
+            SaveAppSettings();
+        }
+
+        private void switchAutostart_CheckedChanged(object sender, AntdUI.BoolEventArgs e)
+        {
+            settings.StartWithWindows = switchAutostart.Checked;
+            SaveAppSettings();
+        }
+
+        private void switchTrayTime_CheckedChanged(object sender, AntdUI.BoolEventArgs e)
+        {
+            settings.ShowTrayTime = switchTrayTime.Checked;
+            SaveAppSettings();
+        }
+
+        /// <summary>应用级设置改动即时保存，并通知主窗体应用（置顶 / 自启 / 托盘 / 快捷键）</summary>
+        private void SaveAppSettings()
+        {
+            settingsService.Save(settings);
+            AppSettingsChanged?.Invoke();
+        }
+
+        private void RefreshHotkeyText()
+        {
+            btnHotkey.Text = Hotkey.TryParse(settings.Hotkey, out Hotkey hotkey)
+                ? hotkey.ToString()
+                : I18n.T("未设置", "Off");
+        }
+
+        private void btnHotkey_Click(object? sender, EventArgs e)
+        {
+            btnHotkey.Text = I18n.T("按下快捷键…", "Press keys…");
+            btnHotkey.Enabled = false;
+            HotkeyRecorder.Start(result =>
+            {
+                btnHotkey.Enabled = true;
+                if (result is not null)
+                {
+                    if (result.Value.IsNone)
+                    {
+                        settings.Hotkey = string.Empty;
+                        SaveAppSettings();
+                    }
+                    else if (!result.Value.IsValid)
+                    {
+                        AntdUI.Message.warn(FindForm()!, I18n.T("快捷键需要同时包含 Ctrl / Alt / Shift 中的一个", "Include Ctrl, Alt or Shift in the hotkey"), autoClose: 2);
+                    }
+                    else
+                    {
+                        settings.Hotkey = result.Value.ToString();
+                        SaveAppSettings();
+                    }
+                }
+
+                RefreshHotkeyText();
+                settingsCard.PerformLayout();
+            });
+        }
+
+        /// <summary>全局快捷键触发：与点击"开始/暂停"等价</summary>
+        public void ToggleFromHotkey() => controller.StartOrPause();
+
         /// <summary>语言切换：持久化 + 全局广播（主窗体统一重刷各页签文案）</summary>
         private void select_lang_SelectedValueChanged(object sender, ObjectNEventArgs e)
         {
@@ -440,13 +547,16 @@ namespace CountTimer.View
             btnDelEvent.Text = I18n.T("删除", "Delete");
             lblSettingsTitle.Text = I18n.T("设置", "Settings");
             lblLanguage.Text = I18n.T("语言", "Language");
+            lblHotkey.Text = I18n.T("快捷键", "Hotkey");
             btnSaveSettings.Text = I18n.T("保存设置", "Save");
+            RefreshHotkeyText();
             // 防御性同步：语言被程序化修改时下拉框保持一致（再次触发时同语言会空操作，无死循环）
             select_lang.SelectedIndex = I18n.IsEnglish ? 1 : 0;
 
             // 标签宽度按文本实测（中文宽度写死会让英文换行/截断）
             lblSettingsTitle.Size = new Size(TextRenderer.MeasureText(lblSettingsTitle.Text, lblSettingsTitle.Font).Width + 8, 24);
             lblLanguage.Size = new Size(TextRenderer.MeasureText(lblLanguage.Text, lblLanguage.Font).Width + 8, 24);
+            lblHotkey.Size = new Size(TextRenderer.MeasureText(lblHotkey.Text, lblHotkey.Font).Width + 8, 24);
 
             string[] durationTexts =
             {
@@ -467,7 +577,10 @@ namespace CountTimer.View
                 I18n.T("自动休息", "Auto break"),
                 I18n.T("自动专注", "Auto focus"),
                 I18n.T("提示音", "Sound"),
-                I18n.T("深色主题", "Dark mode")
+                I18n.T("深色主题", "Dark mode"),
+                I18n.T("窗口置顶", "Always on top"),
+                I18n.T("开机自启", "Auto start"),
+                I18n.T("托盘时间", "Tray time")
             };
             for (int i = 0; i < toggleFields.Count; i++)
             {
@@ -593,13 +706,14 @@ namespace CountTimer.View
 
         private void SyncPhaseUi(TimeSpan remaining)
         {
-            (string title, Color color, AntdUI.TTypeMini buttonType) = controller.Phase switch
+            (Color color, AntdUI.TTypeMini buttonType) = controller.Phase switch
             {
-                PomodoroPhase.Focus => (I18n.T("专注", "Focus"), UiTheme.FocusColor, AntdUI.TTypeMini.Error),
-                PomodoroPhase.ShortBreak => (I18n.T("短休息", "Short break"), UiTheme.BreakColor, AntdUI.TTypeMini.Success),
-                PomodoroPhase.LongBreak => (I18n.T("长休息", "Long break"), UiTheme.LongBreakColor, AntdUI.TTypeMini.Primary),
-                _ => (I18n.T("专注", "Focus"), UiTheme.FocusColor, AntdUI.TTypeMini.Error)
+                PomodoroPhase.Focus => (UiTheme.FocusColor, AntdUI.TTypeMini.Error),
+                PomodoroPhase.ShortBreak => (UiTheme.BreakColor, AntdUI.TTypeMini.Success),
+                PomodoroPhase.LongBreak => (UiTheme.LongBreakColor, AntdUI.TTypeMini.Primary),
+                _ => (UiTheme.FocusColor, AntdUI.TTypeMini.Error)
             };
+            string title = PhaseTitle(controller.Phase);
 
             ring.TitleText = title;
             ring.RingColor = color;
@@ -614,6 +728,14 @@ namespace CountTimer.View
             UpdateStartButton();
         }
 
+        private string PhaseTitle(PomodoroPhase phase) => phase switch
+        {
+            PomodoroPhase.Focus => I18n.T("专注", "Focus"),
+            PomodoroPhase.ShortBreak => I18n.T("短休息", "Short break"),
+            PomodoroPhase.LongBreak => I18n.T("长休息", "Long break"),
+            _ => I18n.T("专注", "Focus")
+        };
+
         private void UpdateStartButton()
         {
             btnStart.Text = controller.IsRunning
@@ -621,6 +743,14 @@ namespace CountTimer.View
                 : (controller.Remaining < controller.PhaseDuration
                     ? I18n.T("继续", "Resume")
                     : (controller.Phase == PomodoroPhase.Focus ? I18n.T("开始专注", "Start focus") : I18n.T("开始休息", "Start break")));
+            RaiseTrayState();
+        }
+
+        /// <summary>托盘状态：剩余时间 + 是否计时中 + 是否已有进行中的阶段（已开始、未重置）</summary>
+        private void RaiseTrayState()
+        {
+            bool active = controller.IsRunning || controller.Remaining < controller.PhaseDuration;
+            TrayStateChanged?.Invoke(controller.Remaining, controller.IsRunning, active, PhaseTitle(controller.Phase));
         }
 
         #endregion
@@ -758,7 +888,7 @@ namespace CountTimer.View
             }
         }
 
-        private void NotifyRegularEventFromWorker(ToDoThing toDoThing)
+        private void NotifyEventFromWorker(ToDoThing toDoThing)
         {
             if (IsDisposed || Disposing || !IsHandleCreated)
             {
@@ -922,6 +1052,9 @@ namespace CountTimer.View
             switchAutoFocus.Checked = settings.AutoStartFocus;
             switchSound.Checked = settings.SoundEnabled;
             switchDark.Checked = settings.DarkMode;
+            switchTopMost.Checked = settings.AlwaysOnTop;
+            switchAutostart.Checked = settings.StartWithWindows;
+            switchTrayTime.Checked = settings.ShowTrayTime;
         }
 
         /// <summary>主题事件：AntdUI 明暗切换时刷新本控件内显式指定颜色的元素（卡片/圆环自行监听）</summary>
@@ -949,6 +1082,9 @@ namespace CountTimer.View
             lblStats.ForeColor = UiTheme.TextSub;
             lblEvent.ForeColor = UiTheme.TextSub;
             lblSettingsTitle.ForeColor = UiTheme.TextMain;
+            // 首行的两个标签同样显式指定了文字色，主题切换后要跟着换，否则深色下几乎看不见
+            lblLanguage.ForeColor = UiTheme.TextSub;
+            lblHotkey.ForeColor = UiTheme.TextSub;
             foreach (var (label, _) in durationFields)
             {
                 label.ForeColor = UiTheme.TextSub;
