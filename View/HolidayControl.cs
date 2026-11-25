@@ -1,22 +1,30 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Model;
 using CountTimer.Service;
+using CountTimer.Share;
 
 namespace CountTimer.View
 {
     /// <summary>
     /// 节假日页签：顶部英雄卡固定展示"下一个节日"大号倒计时与等待进度，
-    /// 下方自绘紧凑列表滚动展示其余节日；跨天自动刷新，主题切换自动重配色
+    /// 下方自绘紧凑列表滚动展示其余节日；跨天自动刷新，主题和语言切换自动更新。
+    /// 数据 = 内置节日 + 自定义生日/纪念日 + 法定放假与调休（后台联网更新）
     /// </summary>
     public class HolidayControl : UserControl, AntdUI.IEventListener
     {
         private readonly HolidayHero hero = new();
         private readonly HolidayList list = new();
+        private readonly System.Windows.Forms.Panel toolbar = new();
+        private readonly AntdUI.Button btnCustomDays = new AntdUI.Button();
+        private readonly CustomDayService customDayService = new CustomDayServiceImpl();
         private readonly System.Windows.Forms.Timer dayWatcher = new() { Interval = 30_000 };
         private DateTime computedDate = DateTime.MinValue;
+        private CustomDayControl? customDayEditor;
 
         public HolidayControl()
         {
@@ -26,22 +34,29 @@ namespace CountTimer.View
             this.AddListener();
             Rebuild(DateTime.Today);
 
-            // 跨天（含挂起唤醒）后重算倒计时
+            // 跨天（含挂起唤醒）后重算倒计时；跨年后新的一年也要联网取安排
             dayWatcher.Tick += (s, e) =>
             {
                 if (Visible && DateTime.Today != computedDate)
                 {
-                    Rebuild(DateTime.Today);
+                    RebuildForToday();
                 }
             };
             dayWatcher.Start();
+
+            // 法定节假日安排在后台联网更新，有变化就重算
+            StatutoryHolidays.Instance.Updated += OnStatutoryUpdated;
+            StatutoryHolidays.Instance.RefreshSoon(DateTime.Today.Year);
         }
 
         public void HandleEvent(AntdUI.EventType id, object? tag)
         {
             if (id == AntdUI.EventType.THEME)
             {
+                // 工具栏的背景也要跟着换：上面的幽灵按钮透出的是父面板的底色
                 BackColor = UiTheme.PageBg;
+                toolbar.BackColor = UiTheme.PageBg;
+                toolbar.Invalidate(true);
             }
         }
 
@@ -60,36 +75,90 @@ namespace CountTimer.View
 
             hero.Dock = DockStyle.Top;
             list.Dock = DockStyle.Fill;
-            // 停靠按添加的逆序处理：Fill 的列表先加，Top 的英雄卡后加（同小计页）
+
+            // 英雄卡下方一行：自定义生日 / 纪念日的入口
+            toolbar.Dock = DockStyle.Top;
+            toolbar.Height = 46;
+            toolbar.BackColor = UiTheme.PageBg;
+            btnCustomDays.Ghost = true;
+            btnCustomDays.BorderWidth = 1F;
+            btnCustomDays.Size = new Size(156, 32);
+            btnCustomDays.Location = new Point(20, 7);
+            btnCustomDays.Click += btnCustomDays_Click;
+            toolbar.Controls.Add(btnCustomDays);
+
+            // 停靠按添加的逆序处理：Fill 的列表先加，Top 面板按视觉顺序的逆序加（同小计页）
             Controls.Add(list);
+            Controls.Add(toolbar);
             Controls.Add(hero);
             Padding = new Padding(16, 12, 16, 12);
+        }
+
+        /// <summary>语言切换后整页重算（文案随语言重建）</summary>
+        public void ApplyLanguage()
+        {
+            btnCustomDays.Text = I18n.T("+ 生日 / 纪念日", "+ Special days");
+            Rebuild(computedDate);
         }
 
         private void Rebuild(DateTime today)
         {
             computedDate = today;
-            var (past, upcoming) = HolidayService.GetAround(today);
+            List<CustomDay> customDays = customDayService.GetAll();
+            var (past, upcoming) = HolidayService.GetAround(today, customDays, StatutoryHolidays.Instance.Get);
 
-            hero.SetHoliday(
-                upcoming.Count > 0 ? upcoming[0] : null,
-                upcoming.Count > 0 ? (upcoming[0].Date.Date - today.Date).Days : 0,
-                past.Count > 0 ? past[^1] : null);
-
-            // 第一个节日已由英雄卡展示，列表只放其余的
-            var entries = new List<(HolidayInfo, int)>();
-            for (int i = 1; i < upcoming.Count; i++)
-            {
-                entries.Add((upcoming[i], (upcoming[i].Date.Date - today.Date).Days));
-            }
-            list.SetItems(entries);
+            HolidayInfo? next = upcoming.Count > 0 ? upcoming[0] : null;
+            int daysLeft = next is null ? 0 : Math.Max(0, (next.Date - today.Date).Days);
+            // 多日假期之中（含首日）：还剩几天（含今天）
+            int daysInHoliday = next is not null && next.Date <= today.Date && next.LastDay > today.Date
+                ? (next.LastDay - today.Date).Days + 1
+                : 0;
+            hero.SetHoliday(next, daysLeft, daysInHoliday, past.Count > 0 ? past[^1] : null);
+            list.SetItems(upcoming.Skip(1).ToList(), today);
         }
 
-        /// <summary>语言切换后整页重算（节日名/农历标注/倒计时文案全部重建）</summary>
-        public void ApplyLanguage()
+        /// <summary>按"今天"重算，并顺带触发一次联网更新（内部有 12 小时节流）</summary>
+        private void RebuildForToday()
         {
-            Rebuild(computedDate);
+            Rebuild(DateTime.Today);
+            StatutoryHolidays.Instance.RefreshSoon(DateTime.Today.Year);
         }
+
+        private void OnStatutoryUpdated()
+        {
+            // 后台线程触发，切回界面线程重算
+            if (IsDisposed || Disposing || !IsHandleCreated)
+            {
+                return;
+            }
+
+            try
+            {
+                BeginInvoke((Action)(() => Rebuild(computedDate)));
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        private void btnCustomDays_Click(object? sender, EventArgs e)
+        {
+            customDayEditor ??= new CustomDayControl();
+            // 先取消订阅，避免重复订阅
+            customDayEditor.DataUpdated -= OnCustomDaysChanged;
+            customDayEditor.DataUpdated += OnCustomDaysChanged;
+            customDayEditor.Prepare();
+
+            AntdUI.Drawer.open(new AntdUI.Drawer.Config(FindForm()!, customDayEditor)
+            {
+                Align = AntdUI.TAlignMini.Right,
+                Mask = true,
+                MaskClosable = true,
+                Dispose = false
+            });
+        }
+
+        private void OnCustomDaysChanged() => Rebuild(computedDate);
 
         protected override void OnVisibleChanged(EventArgs e)
         {
@@ -100,7 +169,7 @@ namespace CountTimer.View
                 PerformLayout();
                 if (DateTime.Today != computedDate)
                 {
-                    Rebuild(DateTime.Today);
+                    RebuildForToday();
                 }
             }
         }
@@ -109,8 +178,11 @@ namespace CountTimer.View
         {
             if (disposing)
             {
+                StatutoryHolidays.Instance.Updated -= OnStatutoryUpdated;
                 dayWatcher.Dispose();
+                customDayEditor?.Dispose();
             }
+
             base.Dispose(disposing);
         }
     }

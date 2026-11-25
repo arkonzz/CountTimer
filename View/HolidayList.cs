@@ -48,16 +48,30 @@ namespace CountTimer.View
             MouseEnter += (s, e) => Focus();
         }
 
-        /// <summary>替换列表内容（已按日期升序），days 为距今天数</summary>
-        public void SetItems(IReadOnlyList<(HolidayInfo Holiday, int Days)> entries)
+        /// <summary>替换列表内容（已按日期升序），倒计时文案按 today 计算</summary>
+        public void SetItems(IReadOnlyList<HolidayInfo> entries, DateTime today)
         {
             items.Clear();
-            foreach (var (holiday, days) in entries)
+            foreach (HolidayInfo holiday in entries)
             {
-                items.Add(new Item(holiday.DisplayName, HolidayHero.FormatDate(holiday), days == 0 ? I18n.T("就是今天", "Today") : I18n.F("还有 {0} 天", "{0} days to go", days)));
+                string daysText = holiday.IsOngoing(today)
+                    ? I18n.F("假期还剩 {0} 天", "{0} days left", (holiday.LastDay - today.Date).Days + 1)
+                    : DaysToGo(holiday.Date, today);
+                items.Add(new Item(holiday.DisplayName, HolidayHero.FormatDate(holiday), daysText));
             }
             ClampScroll();
             Invalidate();
+        }
+
+        private static string DaysToGo(DateTime date, DateTime today)
+        {
+            int days = (date - today.Date).Days;
+            return days switch
+            {
+                <= 0 => I18n.T("就是今天", "Today"),
+                1 => I18n.T("还有 1 天", "1 day to go"),
+                _ => I18n.F("还有 {0} 天", "{0} days to go", days),
+            };
         }
 
         public void HandleEvent(AntdUI.EventType id, object? tag)

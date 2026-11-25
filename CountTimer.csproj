@@ -37,6 +37,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\Holidays\*.json" />
+    <!-- 法定节假日安排的内置兜底数据，来源与许可见同目录下的 LICENSE.holiday-cn.txt -->
+    <EmbeddedResource Include="Resources\Holidays\*.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="CountTimer.Tests" />
   </ItemGroup>
 

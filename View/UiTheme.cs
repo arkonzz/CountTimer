@@ -108,4 +108,19 @@ namespace CountTimer.View
             return path;
         }
     }
+
+    /// <summary>AntdUI 抽屉的宿主是独立的层窗体，关闭时要关掉那一层（它会带走遮罩）</summary>
+    internal static class DrawerHelper
+    {
+        public static void CloseOpenDrawers()
+        {
+            foreach (Form form in Application.OpenForms.Cast<Form>().ToList())
+            {
+                if (form.GetType().Name.Contains("LayeredFormDrawer"))
+                {
+                    form.Close();
+                }
+            }
+        }
+    }
 }
