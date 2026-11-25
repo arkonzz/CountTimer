@@ -36,6 +36,7 @@ namespace CountTimer
             tabs = new AntdUI.Tabs();
             tabPomodoro = new AntdUI.TabPage();
             tabMemo = new AntdUI.TabPage();
+            tabHoliday = new AntdUI.TabPage();
             notifyIcon_cd = new System.Windows.Forms.NotifyIcon(components);
             contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(components);
             showWindowToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -62,6 +63,7 @@ namespace CountTimer
             tabs.TabIndex = 1;
             tabs.Pages.Add(tabPomodoro);
             tabs.Pages.Add(tabMemo);
+            tabs.Pages.Add(tabHoliday);
             //
             // tabPomodoro
             //
@@ -71,7 +73,7 @@ namespace CountTimer
             tabPomodoro.Size = new System.Drawing.Size(656, 576);
             tabPomodoro.TabIndex = 0;
             tabPomodoro.Text = "番茄钟";
-            tabPomodoro.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"10\" y1=\"2\" x2=\"14\" y2=\"2\"/><line x1=\"12\" y1=\"14\" x2=\"15\" y2=\"11\"/><circle cx=\"12\" cy=\"14\" r=\"8\"/></svg>";
+            tabPomodoro.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"#888888\" fill-rule=\"evenodd\"><path d=\"M12 6 A7.5 7.5 0 1 0 12 21 A7.5 7.5 0 1 0 12 6 Z M12 9 A4.5 4.5 0 1 1 12 18 A4.5 4.5 0 1 1 12 9 Z M11.4 4 L12.6 4 L12.6 12 L11.4 12 Z\"/></svg>";
             //
             // tabMemo
             //
@@ -81,7 +83,17 @@ namespace CountTimer
             tabMemo.Size = new System.Drawing.Size(676, 640);
             tabMemo.TabIndex = 1;
             tabMemo.Text = "小计";
-            tabMemo.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><line x1=\"8\" y1=\"6\" x2=\"21\" y2=\"6\"/><line x1=\"8\" y1=\"12\" x2=\"21\" y2=\"12\"/><line x1=\"8\" y1=\"18\" x2=\"21\" y2=\"18\"/><line x1=\"3\" y1=\"6\" x2=\"3.01\" y2=\"6\"/><line x1=\"3\" y1=\"12\" x2=\"3.01\" y2=\"12\"/><line x1=\"3\" y1=\"18\" x2=\"3.01\" y2=\"18\"/></svg>";
+            tabMemo.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"#888888\"><rect x=\"3\" y=\"4.7\" width=\"2.6\" height=\"2.6\" rx=\"1.3\"/><rect x=\"8\" y=\"4.7\" width=\"13\" height=\"2.6\" rx=\"1.3\"/><rect x=\"3\" y=\"10.7\" width=\"2.6\" height=\"2.6\" rx=\"1.3\"/><rect x=\"8\" y=\"10.7\" width=\"13\" height=\"2.6\" rx=\"1.3\"/><rect x=\"3\" y=\"16.7\" width=\"2.6\" height=\"2.6\" rx=\"1.3\"/><rect x=\"8\" y=\"16.7\" width=\"13\" height=\"2.6\" rx=\"1.3\"/></svg>";
+            //
+            // tabHoliday
+            //
+            tabHoliday.Location = new System.Drawing.Point(0, 40);
+            tabHoliday.Name = "tabHoliday";
+            tabHoliday.Padding = new System.Windows.Forms.Padding(3);
+            tabHoliday.Size = new System.Drawing.Size(656, 576);
+            tabHoliday.TabIndex = 2;
+            tabHoliday.Text = "节假日";
+            tabHoliday.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"#888888\" fill-rule=\"evenodd\"><path d=\"M5 4 L19 4 A2 2 0 0 1 21 6 L21 20 A2 2 0 0 1 19 22 L5 22 A2 2 0 0 1 3 20 L3 6 A2 2 0 0 1 5 4 Z M5 6 L5 20 L19 20 L19 6 Z\"/><rect x=\"7\" y=\"2\" width=\"2\" height=\"4\" rx=\"1\"/><rect x=\"15\" y=\"2\" width=\"2\" height=\"4\" rx=\"1\"/><rect x=\"3\" y=\"9\" width=\"18\" height=\"2\"/></svg>";
             //
             // notifyIcon_cd
             //
@@ -131,6 +143,7 @@ namespace CountTimer
         private AntdUI.Tabs tabs;
         private AntdUI.TabPage tabPomodoro;
         private AntdUI.TabPage tabMemo;
+        private AntdUI.TabPage tabHoliday;
         private NotifyIcon notifyIcon_cd;
         private ContextMenuStrip contextMenuStrip1;
         private ToolStripMenuItem showWindowToolStripMenuItem;

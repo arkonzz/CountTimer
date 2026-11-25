@@ -30,6 +30,8 @@ namespace CountTimer.View
         /// <summary>圆环底环（已流逝部分）——用 Fill 保证明暗主题下都清晰可见，
         /// FillTertiary 在亮色下只有 4% 透明黑，几乎看不见</summary>
         public static Color RingTrack => AntdUI.Colour.Fill.Get();
+        /// <summary>节假日倒计时强调色（全局主色·番茄红，跟随明暗主题）</summary>
+        public static Color HolidayAccent => AntdUI.Colour.Primary.Get();
     }
 
     /// <summary>
@@ -62,9 +64,13 @@ namespace CountTimer.View
             if (id == AntdUI.EventType.THEME)
             {
                 BackColor = UiTheme.CardBg;
+                OnThemeChanged();
                 Invalidate();
             }
         }
+
+        /// <summary>主题切换钩子：子类重写以刷新自有元素配色</summary>
+        protected virtual void OnThemeChanged() { }
 
         protected override void OnResize(EventArgs e)
         {

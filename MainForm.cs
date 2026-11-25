@@ -13,6 +13,7 @@ namespace CountTimer
         private readonly AppSettingsService settingsService = new AppSettingsService();
         private PomodoroControl? pomodoroControl;
         private MemoControl? memoControl;
+        private HolidayControl? holidayControl;
 
         public MainForm()
         {
@@ -25,11 +26,13 @@ namespace CountTimer
 
             pomodoroControl = new PomodoroControl(ShowBalloon);
             memoControl = new MemoControl();
+            holidayControl = new HolidayControl();
             // 番茄钟页的主题开关 → 全局应用（EventHub 广播，所有 AntdUI 控件和自绘监听者自动换色）
             pomodoroControl.ThemeChanged += dark => AntdUI.Config.Mode = dark ? TMode.Dark : TMode.Light;
 
             tabPomodoro.Controls.Add(pomodoroControl);
             tabMemo.Controls.Add(memoControl);
+            tabHoliday.Controls.Add(holidayControl);
 
             ApplyContainerTheme();
             this.AddListener();
@@ -46,6 +49,7 @@ namespace CountTimer
             pageHeader1.BackColor = bgColor;
             tabPomodoro.BackColor = bgColor;
             tabMemo.BackColor = bgColor;
+            tabHoliday.BackColor = bgColor;
             // 系统标题栏沉浸式暗色（Dark 属性由 AntdUI 内部处理）
             Dark = AntdUI.Config.Mode == TMode.Dark;
             Invalidate(true);
