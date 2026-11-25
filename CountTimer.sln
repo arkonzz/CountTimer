@@ -5,6 +5,8 @@ VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CountTimer", "CountTimer.csproj", "{291F746C-FB87-4DA9-A34F-281DD4A13183}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CountTimer.Tests", "CountTimer.Tests\CountTimer.Tests.csproj", "{A76188EE-1D13-4491-A55C-17876D7ACD36}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{291F746C-FB87-4DA9-A34F-281DD4A13183}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{291F746C-FB87-4DA9-A34F-281DD4A13183}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{291F746C-FB87-4DA9-A34F-281DD4A13183}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A76188EE-1D13-4491-A55C-17876D7ACD36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A76188EE-1D13-4491-A55C-17876D7ACD36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A76188EE-1D13-4491-A55C-17876D7ACD36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A76188EE-1D13-4491-A55C-17876D7ACD36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

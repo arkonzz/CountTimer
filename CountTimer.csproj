@@ -7,6 +7,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationIcon>icon.ico</ApplicationIcon>
+    <!-- 测试项目放在仓库根目录下，排除出默认通配，否则其源码会被主项目一起编译 -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);CountTimer.Tests\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
