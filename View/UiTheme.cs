@@ -30,6 +30,8 @@ namespace CountTimer.View
         /// <summary>圆环底环（已流逝部分）——用 Fill 保证明暗主题下都清晰可见，
         /// FillTertiary 在亮色下只有 4% 透明黑，几乎看不见</summary>
         public static Color RingTrack => AntdUI.Colour.Fill.Get();
+        /// <summary>趋势小图里非当天的细柱：比圆环底环亮一档——底环很粗，细柱用同一个 Fill 在深色下几乎看不见</summary>
+        public static Color TrendMuted => AntdUI.Colour.TextQuaternary.Get();
         /// <summary>节假日倒计时强调色（全局主色·番茄红，跟随明暗主题）</summary>
         public static Color HolidayAccent => AntdUI.Colour.Primary.Get();
     }

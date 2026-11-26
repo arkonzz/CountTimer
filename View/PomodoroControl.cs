@@ -62,8 +62,14 @@ namespace CountTimer.View
         private readonly FocusTrendControl trend = new();
         private readonly int[] weekCounts = new int[FocusTrendControl.Days];
         private string statsText = string.Empty;
+        // 统计行文字区的宽度：取今日统计和各天悬停文案里最宽的一句，一次定好。
+        // 悬停只换文字不重排——文字一变长短，居中的整行就跟着挪，小图会从鼠标底下跳走
+        private int statsLabelWidth;
         // 统计行的纵坐标由主区域布局算出，文字内容变化重排时复用
         private int statsRowY;
+        // 统计是哪一天算的：程序常驻托盘，跨天后要重算，否则"今日"一直显示昨天的数
+        private DateTime statsDate = DateTime.MinValue;
+        private readonly System.Windows.Forms.Timer dayWatcher = new() { Interval = 30_000 };
         private readonly AntdUI.InputNumber numFocus = new AntdUI.InputNumber();
         private readonly AntdUI.InputNumber numShortBreak = new AntdUI.InputNumber();
         private readonly AntdUI.InputNumber numLongBreak = new AntdUI.InputNumber();
@@ -135,6 +141,16 @@ namespace CountTimer.View
             switchTopMost.CheckedChanged += switchTopMost_CheckedChanged;
             switchAutostart.CheckedChanged += switchAutostart_CheckedChanged;
             switchTrayTime.CheckedChanged += switchTrayTime_CheckedChanged;
+
+            // 跨天（含挂起唤醒）后重算统计
+            dayWatcher.Tick += (s, e) =>
+            {
+                if (Visible)
+                {
+                    RefreshStatsIfNewDay();
+                }
+            };
+            dayWatcher.Start();
         }
 
         #region 布局
@@ -393,14 +409,14 @@ namespace CountTimer.View
             Invalidate(true);
         }
 
-        /// <summary>统计行：趋势小图 + 文字，整体水平居中；文字宽度随内容变化</summary>
+        /// <summary>统计行：趋势小图 + 文字，整体水平居中；文字区宽度固定（见 statsLabelWidth）</summary>
         private void LayoutStats(int centerX, int y)
         {
-            // 文字宽度之外留出控件内边距，避免最长的一句在末尾折行
-            lblStats.Size = new Size(TextRenderer.MeasureText(lblStats.Text, lblStats.Font).Width + 16, 26);
-            int startX = Math.Max(4, centerX - (trend.Width + 10 + lblStats.Width) / 2);
-            trend.Location = new Point(startX, y - 1);
+            int startX = Math.Max(4, centerX - (trend.Width + 10 + statsLabelWidth) / 2);
+            // 小图比文字行高（基线下还有星期标注），两者对齐中线，不占额外的行高
+            trend.Location = new Point(startX, y - (trend.Height - lblStats.Height) / 2);
             lblStats.Location = new Point(startX + trend.Width + 10, y);
+            lblStats.Size = new Size(statsLabelWidth, 26);
         }
 
         /// <summary>设置卡片内部布局：首行标题/语言/快捷键/保存，其余为 4 列网格</summary>
@@ -444,10 +460,11 @@ namespace CountTimer.View
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
-            // 隐藏状态下窗口缩放不会触发本页布局，切回时强制重排
+            // 隐藏状态下窗口缩放不会触发本页布局，切回时强制重排并补算跨天
             if (Visible)
             {
                 PerformLayout();
+                RefreshStatsIfNewDay();
             }
         }
 
@@ -1154,6 +1171,7 @@ namespace CountTimer.View
 
         private void RefreshStats()
         {
+            statsDate = DateTime.Today;
             int count = sessionService.GetTodayCount();
             int minutes = sessionService.GetTodayMinutes();
 
@@ -1161,7 +1179,7 @@ namespace CountTimer.View
             Dictionary<string, int> daily = sessionService.GetDailyCounts(FocusTrendControl.Days);
             for (int i = 0; i < weekCounts.Length; i++)
             {
-                weekCounts[i] = daily.GetValueOrDefault(DateTime.Today.AddDays(i - (weekCounts.Length - 1)).ToString("yyyy-MM-dd"));
+                weekCounts[i] = daily.GetValueOrDefault(statsDate.AddDays(i - (weekCounts.Length - 1)).ToString("yyyy-MM-dd"));
             }
 
             statsText = I18n.F(
@@ -1169,33 +1187,48 @@ namespace CountTimer.View
                 "Today {0} pomodoros · {1} min focused · {2} in the last 7 days",
                 count, minutes, weekCounts.Sum());
             trend.SetCounts(weekCounts);
-            lblStats.Text = statsText;
+
+            // 文字区宽度留出控件内边距；取各句里最宽的，悬停时换成哪一句都放得下
+            statsLabelWidth = Enumerable.Range(-1, weekCounts.Length + 1)
+                .Max(index => TextRenderer.MeasureText(StatsText(index), lblStats.Font).Width) + 16;
+            lblStats.Text = StatsText(trend.HoverIndex);
             LayoutStats(ClientSize.Width / 2, statsRowY);
         }
 
-        /// <summary>悬停趋势小图：文字改为显示那一天的数值，移开恢复今日统计</summary>
-        private void Trend_HoverChanged(int index)
+        private void RefreshStatsIfNewDay()
         {
-            if (index < 0)
+            if (DateTime.Today != statsDate)
             {
-                lblStats.Text = statsText;
+                RefreshStats();
             }
-            else
+        }
+
+        /// <summary>统计行文字：没悬停时是今日统计，悬停趋势小图时是那一天的完成数</summary>
+        private string StatsText(int hoverIndex)
+        {
+            if (hoverIndex < 0)
             {
-                DateTime day = DateTime.Today.AddDays(index - (weekCounts.Length - 1));
-                string weekday = I18n.IsEnglish
-                    ? day.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)
-                    : "周" + "日一二三四五六"[(int)day.DayOfWeek];
-                lblStats.Text = I18n.F("{0}（{1:M月d日}）· {2} 个番茄", "{0}, {1:M/d} · {2} pomodoros", weekday, day, weekCounts[index]);
+                return statsText;
             }
 
-            LayoutStats(ClientSize.Width / 2, statsRowY);
+            DateTime day = statsDate.AddDays(hoverIndex - (weekCounts.Length - 1));
+            string weekday = I18n.IsEnglish
+                ? day.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture)
+                : "周" + "日一二三四五六"[(int)day.DayOfWeek];
+            return I18n.F("{0}（{1:M月d日}）· {2} 个番茄", "{0}, {1:M/d} · {2} pomodoros", weekday, day, weekCounts[hoverIndex]);
+        }
+
+        /// <summary>悬停趋势小图：文字改为显示那一天的数值，移开恢复今日统计；整行位置不变</summary>
+        private void Trend_HoverChanged(int index)
+        {
+            lblStats.Text = StatsText(index);
         }
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
+                dayWatcher.Dispose();
                 controller.Dispose();
                 _countdownController.Dispose();
                 _cleanupWorker.Dispose();

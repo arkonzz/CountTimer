@@ -18,7 +18,8 @@ namespace CountTimer.View
         private const int BandWidth = 16;       // 每天的槽位，同时是悬停命中区域
         private const int BarWidth = 6;
         private const int BaselineY = 15;       // 柱子最高长到这里，基线画在它上面
-        private const int ControlHeight = 28;
+        // 基线以下是星期标注：8 号雅黑一行要 14~16 像素，高度给少了字会被控件底边裁掉
+        private const int ControlHeight = 32;
         private const int ZeroStubHeight = 2;
 
         private static readonly string[] WeekdayZh = { "日", "一", "二", "三", "四", "五", "六" };
@@ -26,10 +27,15 @@ namespace CountTimer.View
 
         private readonly int[] counts = new int[Days];
         private readonly Font fontWeekday = new("Microsoft YaHei UI", 8F);
+        // 这批数据的第一天（6 天前）：星期标注跟着它算，和数据始终对应
+        private DateTime firstDate = DateTime.Today.AddDays(-(Days - 1));
         private int hovered = -1;
 
         /// <summary>悬停到某一天（0 = 6 天前，Days - 1 = 今天），移开为 -1</summary>
         public event Action<int>? HoverChanged;
+
+        /// <summary>当前悬停的那一天，含义同 <see cref="HoverChanged"/>，没悬停为 -1</summary>
+        public int HoverIndex => hovered;
 
         public FocusTrendControl()
         {
@@ -50,6 +56,7 @@ namespace CountTimer.View
                 counts[i] = i < values.Count ? Math.Max(0, values[i]) : 0;
             }
 
+            firstDate = DateTime.Today.AddDays(-(Days - 1));
             Invalidate();
         }
 
@@ -93,17 +100,17 @@ namespace CountTimer.View
                     ? ZeroStubHeight
                     : Math.Max(3, (int)Math.Round((BaselineY - 1) * counts[i] / (double)max));
                 var bar = new Rectangle(bandX + (BandWidth - BarWidth) / 2, BaselineY - barHeight, BarWidth, barHeight);
-                Color barColor = counts[i] == 0 || !isToday ? UiTheme.RingTrack : UiTheme.HolidayAccent;
+                Color barColor = counts[i] == 0 || !isToday ? UiTheme.TrendMuted : UiTheme.HolidayAccent;
                 using (var brush = new SolidBrush(barColor))
                 using (GraphicsPath path = RoundedTop(bar, BarWidth / 2f))
                 {
                     g.FillPath(brush, path);
                 }
 
-                DayOfWeek weekday = DateTime.Today.AddDays(i - (Days - 1)).DayOfWeek;
+                DayOfWeek weekday = firstDate.AddDays(i).DayOfWeek;
                 string label = I18n.IsEnglish ? WeekdayEn[(int)weekday] : WeekdayZh[(int)weekday];
                 Color textColor = isToday ? UiTheme.TextMain : UiTheme.TextSub;
-                var textArea = new Rectangle(bandX, BaselineY + 4, BandWidth, Height - BaselineY - 4);
+                var textArea = new Rectangle(bandX, BaselineY + 1, BandWidth, Height - BaselineY - 1);
                 TextRenderer.DrawText(g, label, fontWeekday, textArea, textColor,
                     TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
             }
@@ -139,7 +146,7 @@ namespace CountTimer.View
             SetHover(-1);
         }
 
-        private void SetHover(int index)
+        internal void SetHover(int index)
         {
             if (index < 0 || index >= Days)
             {
