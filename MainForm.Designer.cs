@@ -92,7 +92,7 @@ namespace CountTimer
             tabHoliday.Padding = new System.Windows.Forms.Padding(3);
             tabHoliday.Size = new System.Drawing.Size(656, 576);
             tabHoliday.TabIndex = 2;
-            tabHoliday.Text = "节假日";
+            tabHoliday.Text = "倒数日";
             tabHoliday.IconSvg = "<svg viewBox=\"0 0 24 24\" fill=\"#888888\" fill-rule=\"evenodd\"><path d=\"M5 4 L19 4 A2 2 0 0 1 21 6 L21 20 A2 2 0 0 1 19 22 L5 22 A2 2 0 0 1 3 20 L3 6 A2 2 0 0 1 5 4 Z M5 6 L5 20 L19 20 L19 6 Z\"/><rect x=\"7\" y=\"2\" width=\"2\" height=\"4\" rx=\"1\"/><rect x=\"15\" y=\"2\" width=\"2\" height=\"4\" rx=\"1\"/><rect x=\"3\" y=\"9\" width=\"18\" height=\"2\"/></svg>";
             //
             // notifyIcon_cd

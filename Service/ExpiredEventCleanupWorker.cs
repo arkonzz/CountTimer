@@ -7,6 +7,7 @@ using CountTimer.Service.ServiceImpl;
 
 namespace CountTimer.Service
 {
+    /// <summary>事件的后台维护（倒数日页启动）：到点提醒、把过去的循环事件滚到下一次、清理过期的一次性事件</summary>
     public sealed class ExpiredEventCleanupWorker : IDisposable
     {
         private static readonly TimeSpan CleanupInterval = TimeSpan.FromSeconds(30);
@@ -24,11 +25,10 @@ namespace CountTimer.Service
         }
 
         /// <summary>
-        /// 后台循环：到点提醒、跨天滚动循环事件、清理过期的一次性事件。
-        /// eventDue：到点事件（循环事件一律提醒；一次性事件仅在倒计时正跟随时提醒）。
-        /// isCountingDown：倒计时是否正在跟随该事件
+        /// 后台循环：到点提醒、滚动循环事件、清理过期的一次性事件（提醒完随即清理）。
+        /// eventDue：到点的事件，循环的和一次性的都提醒
         /// </summary>
-        public void Start(Action eventsChanged, Action<ToDoThing>? eventDue = null, Func<ToDoThing, bool>? isCountingDown = null)
+        public void Start(Action eventsChanged, Action<ToDoThing>? eventDue = null)
         {
             _ = Task.Run(async () =>
             {
@@ -37,7 +37,7 @@ namespace CountTimer.Service
                     while (!_cts.IsCancellationRequested)
                     {
                         DateTime now = DateTime.Now;
-                        NotifyDueEvents(now, eventDue, isCountingDown);
+                        NotifyDueEvents(now, eventDue);
 
                         if (SpanNewDay(_lastRunTime))
                         {
@@ -60,18 +60,10 @@ namespace CountTimer.Service
             }, _cts.Token);
         }
 
-        /// <summary>
-        /// 到点事件是否由后台提醒：循环事件一律提醒；一次性事件只有倒计时正在跟随时才提醒。
-        /// 后者是兜底——它本该由倒计时自己提醒，但清理可能先一步把它删掉并停掉倒计时
-        /// </summary>
-        internal static bool ShouldNotify(ToDoThing toDoThing, DateTime now, Func<ToDoThing, bool>? isCountingDown)
+        /// <summary>是否到点：时间合法且不晚于 now</summary>
+        internal static bool ShouldNotify(ToDoThing toDoThing, DateTime now)
         {
-            if (!DateTime.TryParse(toDoThing.endTime, out DateTime endTime) || endTime > now)
-            {
-                return false;
-            }
-
-            return toDoThing.isRegular || isCountingDown?.Invoke(toDoThing) == true;
+            return DateTime.TryParse(toDoThing.endTime, out DateTime endTime) && endTime <= now;
         }
 
         public void Wake()
@@ -98,12 +90,13 @@ namespace CountTimer.Service
             await _wakeSignal.WaitAsync(delay, token);
         }
 
+        /// <summary>睡到最近一个事件到点，最多 30 秒（保证至少每 30 秒检查一遍）；已到点的事件在这一轮就被提醒、滚动或清理，不会让循环空转</summary>
         private TimeSpan GetNextDelay(DateTime now)
         {
             TimeSpan nextDelay = CleanupInterval;
             foreach (ToDoThing toDoThing in _service.GetTodoList())
             {
-                if (!toDoThing.isRegular || !DateTime.TryParse(toDoThing.endTime, out DateTime endTime))
+                if (!DateTime.TryParse(toDoThing.endTime, out DateTime endTime))
                 {
                     continue;
                 }
@@ -123,12 +116,12 @@ namespace CountTimer.Service
             return nextDelay < MinimumDelay ? MinimumDelay : nextDelay;
         }
 
-        private void NotifyDueEvents(DateTime now, Action<ToDoThing>? eventDue, Func<ToDoThing, bool>? isCountingDown)
+        private void NotifyDueEvents(DateTime now, Action<ToDoThing>? eventDue)
         {
             // 先提醒再滚动/清理，避免事件先被删掉导致提醒丢失
             foreach (ToDoThing toDoThing in _service.GetTodoList())
             {
-                if (!ShouldNotify(toDoThing, now, isCountingDown))
+                if (!ShouldNotify(toDoThing, now))
                 {
                     continue;
                 }

@@ -1,4 +1,5 @@
 ﻿using AntdUI;
+using CountTimer.Service;
 using CountTimer.Share;
 using SqlSugar;
 
@@ -31,18 +32,9 @@ namespace CountTimer.Model
 
         public override string ToString()
         {
-            string label = Kind switch
-            {
-                RepeatKind.Daily => I18n.T("每天", "Daily"),
-                RepeatKind.Weekdays => I18n.T("工作日", "Weekdays"),
-                RepeatKind.Weekly => I18n.T("每周", "Weekly") + WeekdayName((DayOfWeek)repeatDay),
-                _ => string.Empty,
-            };
+            (string zh, string en) = RepeatRule.Describe(Kind, (DayOfWeek)repeatDay);
+            string label = I18n.T(zh, en);
             return label.Length == 0 ? toDoInfo : $"{toDoInfo}（{label}）";
         }
-
-        private static string WeekdayName(DayOfWeek day) => I18n.IsEnglish
-            ? " " + day.ToString()
-            : "日一二三四五六"[(int)day].ToString();
     }
 }

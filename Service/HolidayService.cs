@@ -30,12 +30,14 @@ namespace CountTimer.Service
         /// <summary>
         /// 以 today 为界把节日拆成两段（各自按日期升序）：
         /// Past 用于英雄卡"上个节日以来已过 N%"的进度计算，Upcoming 用于倒计时展示。
-        /// customDays：自定义的生日/纪念日和每月重复的日子；statutory：按年取法定放假安排，没有则为 null
+        /// customDays：自定义的生日/纪念日和每月重复的日子；statutory：按年取法定放假安排，没有则为 null；
+        /// events：事件倒计时，每个只放下一次发生，只进 Upcoming
         /// </summary>
         public static (List<HolidayInfo> Past, List<HolidayInfo> Upcoming) GetAround(
             DateTime today,
             IReadOnlyList<CustomDay>? customDays = null,
-            Func<int, StatutoryYear?>? statutory = null)
+            Func<int, StatutoryYear?>? statutory = null,
+            IReadOnlyList<ToDoThing>? events = null)
         {
             // 多取上一年，保证元旦当天也有"上一个节日"可算进度；
             // 多生成到 Y+2：除夕按"农历次年春节前一天"计算，会领先落到公历次年 1 月
@@ -60,13 +62,18 @@ namespace CountTimer.Service
                 }
             }
 
+            if (events is not null)
+            {
+                AddEvents(list, events, today);
+            }
+
             if (statutory is not null)
             {
                 ApplyArrangements(list, statutory);
             }
 
-            // 同一天既有节日又有每月重复的日子时节日在前：英雄卡优先显示节日
-            list = list.OrderBy(h => h.Date).ThenBy(h => h.IsMonthly ? 1 : 0).ToList();
+            // 同一天既有节日又有自定义的日子时节日在前，其次是每月重复的日子，最后是事件：英雄卡优先显示节日
+            list = list.OrderBy(h => h.Date).ThenBy(SameDayRank).ToList();
             // 假期首日已过但还没放完的，仍然算在"未来"里
             var upcoming = list.FindAll(h => h.LastDay >= today.Date);
             if (upcoming.Count > MaxUpcomingCount)
@@ -79,6 +86,15 @@ namespace CountTimer.Service
 
         /// <summary>取 today（含）起的未来节日列表（不含自定义日子与放假安排），覆盖未来一整年</summary>
         public static List<HolidayInfo> GetUpcoming(DateTime today) => GetAround(today).Upcoming;
+
+        private static int SameDayRank(HolidayInfo h) => h.IsEvent ? 2 : h.IsMonthly ? 1 : 0;
+
+        /// <summary>
+        /// 英雄卡显示的那一条：列表里第一个不是循环事件的条目。每天 / 工作日 / 每周循环的事件
+        /// 永远排在未来一两天，让它上英雄卡的话大号倒计时就永远是"今天 / 明天"
+        /// </summary>
+        public static HolidayInfo? PickHero(IReadOnlyList<HolidayInfo> upcoming)
+            => upcoming.FirstOrDefault(h => !h.IsRecurringEvent);
 
         /// <summary>内置节日：公历固定 + 农历 + 清明。超出农历历表范围的年份跳过农历项</summary>
         internal static List<HolidayInfo> BaseHolidays(int fromYear, int toYear)
@@ -302,6 +318,71 @@ namespace CountTimer.Service
                 Note = string.Join(" · ", zh),
                 NoteEn = string.Join(" · ", en),
             });
+        }
+
+        #endregion
+
+        #region 事件倒计时
+
+        /// <summary>每个事件只放下一次发生。循环事件过去一次后数据里就不留上一次了，所以事件不进 Past</summary>
+        private static void AddEvents(List<HolidayInfo> list, IReadOnlyList<ToDoThing> events, DateTime today)
+        {
+            DateTime now = DateTime.Now;
+            foreach (ToDoThing thing in events)
+            {
+                string title = thing.toDoInfo.Trim();
+                // 一次性事件过去后会被后台清掉，这里不再显示
+                if (title.Length == 0
+                    || RepeatRule.NextOccurrence(thing, now) is not DateTime next
+                    || next.Date < today.Date)
+                {
+                    continue;
+                }
+
+                // 标注写时刻，循环的再带上重复方式："09:00 · 每天"
+                string zh = next.ToString("HH:mm"), en = next.ToString("h:mm tt", CultureInfo.InvariantCulture);
+                (string repeatZh, string repeatEn) = RepeatRule.Describe(thing.Kind, next.DayOfWeek);
+                if (repeatZh.Length > 0)
+                {
+                    zh += $" · {repeatZh}";
+                    en += $" · {repeatEn}";
+                }
+
+                list.Add(new HolidayInfo
+                {
+                    Name = title,
+                    NameEn = title,
+                    Date = next.Date,
+                    Note = zh,
+                    NoteEn = en,
+                    IsEvent = true,
+                    IsRecurringEvent = thing.Kind != RepeatKind.None,
+                    Time = next,
+                });
+            }
+        }
+
+        /// <summary>今天之内还没到点的事件还剩多久："还有 2 小时 13 分"；不到一小时只说分，不到一分钟是"马上"</summary>
+        internal static (string Zh, string En) TimeLeft(DateTime target, DateTime now)
+        {
+            TimeSpan left = target - now;
+            if (left.TotalMinutes < 1)
+            {
+                return ("马上", "any moment");
+            }
+
+            int hours = (int)left.TotalHours;
+            return hours > 0
+                ? ($"还有 {hours} 小时 {left.Minutes} 分", $"{hours} h {left.Minutes} min to go")
+                : ($"还有 {left.Minutes} 分", $"{left.Minutes} min to go");
+        }
+
+        /// <summary>今天之内、还没到点的事件在界面上显示的剩余时间；其他条目为 null，照常显示还有几天</summary>
+        internal static (string Zh, string En)? TimeLeftToday(HolidayInfo holiday, DateTime now)
+        {
+            return holiday.Time is DateTime time && time.Date == now.Date && time > now
+                ? TimeLeft(time, now)
+                : null;
         }
 
         #endregion

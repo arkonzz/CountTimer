@@ -20,6 +20,8 @@ namespace CountTimer.View
         private HolidayInfo? previous;
         private int daysLeft;
         private int daysLeftInHoliday;
+        // 今天之内的事件：进度条上方写还剩多久，代替"就是今天"
+        private string todayCaption = string.Empty;
 
         private readonly Font fontName = new("Microsoft YaHei UI", 16F, FontStyle.Bold);
         private readonly Font fontDate = new("Microsoft YaHei UI", 9.5F);
@@ -36,14 +38,16 @@ namespace CountTimer.View
         }
 
         /// <summary>
-        /// 设置英雄卡内容。days：距首日的天数；daysInHoliday：处在多日假期之中（含首日）时还剩几天（含今天），否则为 0
+        /// 设置英雄卡内容。days：距首日的天数；daysInHoliday：处在多日假期之中（含首日）时还剩几天（含今天），否则为 0；
+        /// caption：当天时进度条上方的说明，不传就是"就是今天"
         /// </summary>
-        public void SetHoliday(HolidayInfo? next, int days, int daysInHoliday, HolidayInfo? prev)
+        public void SetHoliday(HolidayInfo? next, int days, int daysInHoliday, HolidayInfo? prev, string? caption = null)
         {
             holiday = next;
             previous = prev;
             daysLeft = days;
             daysLeftInHoliday = daysInHoliday;
+            todayCaption = caption ?? string.Empty;
             Invalidate();
         }
 
@@ -177,7 +181,7 @@ namespace CountTimer.View
             }
             else if (daysLeft == 0)
             {
-                caption = I18n.T("就是今天", "It's today");
+                caption = todayCaption.Length > 0 ? todayCaption : I18n.T("就是今天", "It's today");
             }
             else if (previous is not null)
             {

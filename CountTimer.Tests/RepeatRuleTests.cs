@@ -58,16 +58,18 @@ public class RepeatRuleTests
     }
 
     [Fact]
-    public void BackgroundNotifiesRepeatingEventsAlwaysButOneOffEventsOnlyWhileCountdownFollows()
+    public void BackgroundNotifiesEveryEventOnceItsTimeComes()
     {
+        // 事件归倒数日页之后没有"正在跟随的倒计时"了：循环的和一次性的到点都提醒
         ToDoThing regular = new() { Id = 1, isRegular = true, endTime = "2026-11-25 09:00:00" };
         ToDoThing oneOff = new() { Id = 2, endTime = "2026-11-25 09:00:00" };
-        ToDoThing future = new() { Id = 3, isRegular = true, endTime = "2026-11-25 11:00:00" };
-        Func<ToDoThing, bool> followingOneOff = thing => thing.Id == 2;
+        ToDoThing dueRightNow = new() { Id = 4, endTime = "2026-11-25 10:00:00" };
+        ToDoThing future = new() { Id = 3, endTime = "2026-11-25 11:00:00" };
 
-        Assert.True(ExpiredEventCleanupWorker.ShouldNotify(regular, WednesdayMorning, _ => false));
-        Assert.True(ExpiredEventCleanupWorker.ShouldNotify(oneOff, WednesdayMorning, followingOneOff));
-        Assert.False(ExpiredEventCleanupWorker.ShouldNotify(oneOff, WednesdayMorning, _ => false));
-        Assert.False(ExpiredEventCleanupWorker.ShouldNotify(future, WednesdayMorning, followingOneOff));
+        Assert.True(ExpiredEventCleanupWorker.ShouldNotify(regular, WednesdayMorning));
+        Assert.True(ExpiredEventCleanupWorker.ShouldNotify(oneOff, WednesdayMorning));
+        Assert.True(ExpiredEventCleanupWorker.ShouldNotify(dueRightNow, WednesdayMorning));
+        Assert.False(ExpiredEventCleanupWorker.ShouldNotify(future, WednesdayMorning));
+        Assert.False(ExpiredEventCleanupWorker.ShouldNotify(new ToDoThing { endTime = "不是时间" }, WednesdayMorning));
     }
 }

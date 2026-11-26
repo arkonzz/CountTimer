@@ -31,6 +31,15 @@ namespace CountTimer.Model
         /// <summary>每月重复的日子（发薪日这类）；和节日落在同一天时排在节日后面</summary>
         public bool IsMonthly { get; init; }
 
+        /// <summary>事件倒计时；有具体时刻，写在标注里</summary>
+        public bool IsEvent { get; init; }
+
+        /// <summary>事件下一次发生的完整时刻（含时分）；节日和日子只到日期，为 null</summary>
+        public DateTime? Time { get; init; }
+
+        /// <summary>每天 / 工作日 / 每周循环的事件：永远排在未来一两天，只进列表、不上英雄卡</summary>
+        public bool IsRecurringEvent { get; init; }
+
         /// <summary>最后一天（含）</summary>
         public DateTime LastDay => EndDate == default ? Date : EndDate;
 

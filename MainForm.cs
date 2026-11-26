@@ -71,7 +71,7 @@ namespace CountTimer
 
             pomodoroControl = new PomodoroControl(ShowBalloon, appSettings);
             memoControl = new MemoControl();
-            holidayControl = new HolidayControl();
+            holidayControl = new HolidayControl(ShowBalloon);
             // 番茄钟页的主题开关 → 全局应用（EventHub 广播，所有 AntdUI 控件和自绘监听者自动换色）
             pomodoroControl.ThemeChanged += dark => AntdUI.Config.Mode = dark ? TMode.Dark : TMode.Light;
             pomodoroControl.TrayStateChanged += UpdateTrayIcon;
@@ -133,7 +133,8 @@ namespace CountTimer
             pageHeader1.Text = title;
             tabPomodoro.Text = I18n.T("番茄钟", "Pomodoro");
             tabMemo.Text = I18n.T("小计", "Notes");
-            tabHoliday.Text = I18n.T("节假日", "Holidays");
+            // 这一页除了节日还有生日、发薪日、事件倒计时，都按"还有几天"倒数
+            tabHoliday.Text = I18n.T("倒数日", "Countdowns");
             showWindowToolStripMenuItem.Text = I18n.T("显示主界面", "Show");
             exitToolStripMenuItem.Text = I18n.T("退出", "Exit");
             UpdateTrayTooltip();
@@ -542,12 +543,12 @@ namespace CountTimer
             await System.Threading.Tasks.Task.Delay(600);
             System.IO.File.AppendAllText(logPath, $"after hotkey again running={pomodoroControl?.E2EIsRunning} (expect True)\n");
 
-            // 事件编辑抽屉：打开 → 出现新窗体 → 关闭 → 窗体消失
+            // 事件编辑抽屉（倒数日页）：打开 → 出现新窗体 → 关闭 → 窗体消失
             int formsBefore = Application.OpenForms.Count;
-            pomodoroControl?.E2EOpenDrawer();
+            holidayControl?.E2EOpenEventDrawer();
             await System.Threading.Tasks.Task.Delay(1500);
             int formsDuring = Application.OpenForms.Count;
-            pomodoroControl?.E2ECloseDrawer();
+            holidayControl?.E2ECloseDrawer();
             await System.Threading.Tasks.Task.Delay(800);
             int formsAfter = Application.OpenForms.Count;
             System.IO.File.AppendAllText(logPath, $"drawer forms before={formsBefore} during={formsDuring} after800ms={formsAfter}\n");

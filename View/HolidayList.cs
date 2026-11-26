@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using AntdUI;
 using CountTimer.Model;
+using CountTimer.Service;
 using CountTimer.Share;
 
 namespace CountTimer.View
@@ -52,11 +53,15 @@ namespace CountTimer.View
         public void SetItems(IReadOnlyList<HolidayInfo> entries, DateTime today)
         {
             items.Clear();
+            DateTime now = DateTime.Now;
             foreach (HolidayInfo holiday in entries)
             {
                 string daysText = holiday.IsOngoing(today)
                     ? I18n.F("假期还剩 {0} 天", "{0} days left", (holiday.LastDay - today.Date).Days + 1)
-                    : DaysToGo(holiday.Date, today);
+                    // 今天之内还没到点的事件写还剩多久，比"就是今天"有用
+                    : HolidayService.TimeLeftToday(holiday, now) is { } left
+                        ? I18n.T(left.Zh, left.En)
+                        : DaysToGo(holiday.Date, today);
                 items.Add(new Item(holiday.DisplayName, HolidayHero.FormatDate(holiday), daysText));
             }
             ClampScroll();
@@ -121,7 +126,8 @@ namespace CountTimer.View
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             int width = ClientSize.Width;
-            int daysWidth = 120;
+            // 剩余时间比"还有 N 天"长（"还有 2 小时 13 分"），按最宽的一条给宽度
+            int daysWidth = Math.Max(120, items.Count == 0 ? 0 : items.Max(item => TextRenderer.MeasureText(g, item.DaysText, fontDays).Width) + 8);
 
             for (int i = 0; i < items.Count; i++)
             {

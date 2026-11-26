@@ -42,5 +42,39 @@ namespace CountTimer.Service
             RepeatKind.Weekdays => isWorkday(date),
             _ => true,
         };
+
+        /// <summary>
+        /// 事件下一次发生的时间。循环事件存的就是下一次，后台还没来得及往前滚的现算；时间格式不对时为 null
+        /// </summary>
+        public static DateTime? NextOccurrence(ToDoThing thing, DateTime now)
+        {
+            if (!DateTime.TryParse(thing.endTime, out DateTime end))
+            {
+                return null;
+            }
+
+            if (thing.Kind != RepeatKind.None && end < now)
+            {
+                end = Next(thing.Kind, thing.repeatDay, end.TimeOfDay, now);
+            }
+
+            return end;
+        }
+
+        /// <summary>重复方式的显示文字："每天" / "工作日" / "每周三"，不重复为空；每周重复时 weekday 传那天是星期几</summary>
+        internal static (string Zh, string En) Describe(RepeatKind kind, DayOfWeek? weekday = null)
+        {
+            switch (kind)
+            {
+                case RepeatKind.Daily:
+                    return ("每天", "Daily");
+                case RepeatKind.Weekdays:
+                    return ("工作日", "Weekdays");
+                case RepeatKind.Weekly when weekday is { } day:
+                    return ($"每周{"日一二三四五六"[(int)day]}", $"Weekly {day}");
+                default:
+                    return (string.Empty, string.Empty);
+            }
+        }
     }
 }
