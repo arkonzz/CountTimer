@@ -28,6 +28,9 @@ namespace CountTimer.Model
         /// <summary>法定节日：有放假安排时并入对应的假期</summary>
         public bool IsStatutory { get; init; }
 
+        /// <summary>每月重复的日子（发薪日这类）；和节日落在同一天时排在节日后面</summary>
+        public bool IsMonthly { get; init; }
+
         /// <summary>最后一天（含）</summary>
         public DateTime LastDay => EndDate == default ? Date : EndDate;
 

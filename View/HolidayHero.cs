@@ -181,7 +181,10 @@ namespace CountTimer.View
             }
             else if (previous is not null)
             {
-                caption = I18n.F("{0}以来已过 {1}%", "{1}% since {0}", previous.DisplayName, Math.Round(ratio * 100));
+                // 每月重复的日子：上一个就是它自己的上一次，写成"自上次XX以来"才不会读成两个不同的日子
+                caption = holiday!.IsMonthly && previous.Name == holiday.Name
+                    ? I18n.F("自上次{0}以来已过 {1}%", "{1}% since last {0}", previous.DisplayName, Math.Round(ratio * 100))
+                    : I18n.F("{0}以来已过 {1}%", "{1}% since {0}", previous.DisplayName, Math.Round(ratio * 100));
             }
             else
             {

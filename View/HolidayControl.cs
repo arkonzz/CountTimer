@@ -13,7 +13,7 @@ namespace CountTimer.View
     /// <summary>
     /// 节假日页签：顶部英雄卡固定展示"下一个节日"大号倒计时与等待进度，
     /// 下方自绘紧凑列表滚动展示其余节日；跨天自动刷新，主题和语言切换自动更新。
-    /// 数据 = 内置节日 + 自定义生日/纪念日 + 法定放假与调休（后台联网更新）
+    /// 数据 = 内置节日 + 自定义生日/纪念日 + 每月重复的日子（发薪日这类）+ 法定放假与调休（后台联网更新）
     /// </summary>
     public class HolidayControl : UserControl, AntdUI.IEventListener
     {
@@ -76,13 +76,13 @@ namespace CountTimer.View
             hero.Dock = DockStyle.Top;
             list.Dock = DockStyle.Fill;
 
-            // 英雄卡下方一行：自定义生日 / 纪念日的入口
+            // 英雄卡下方一行：自定义生日 / 纪念日 / 每月重复的入口
             toolbar.Dock = DockStyle.Top;
             toolbar.Height = 46;
             toolbar.BackColor = UiTheme.PageBg;
             btnCustomDays.Ghost = true;
             btnCustomDays.BorderWidth = 1F;
-            btnCustomDays.Size = new Size(156, 32);
+            btnCustomDays.Size = new Size(220, 32);
             btnCustomDays.Location = new Point(20, 7);
             btnCustomDays.Click += btnCustomDays_Click;
             toolbar.Controls.Add(btnCustomDays);
@@ -97,7 +97,9 @@ namespace CountTimer.View
         /// <summary>语言切换后整页重算（文案随语言重建）</summary>
         public void ApplyLanguage()
         {
-            btnCustomDays.Text = I18n.T("+ 生日 / 纪念日", "+ Special days");
+            btnCustomDays.Text = I18n.T("+ 生日 / 纪念日 / 每月重复", "+ Special days");
+            // 按钮宽度随文字：中文把三种类型写全了，比英文长
+            btnCustomDays.Width = TextRenderer.MeasureText(btnCustomDays.Text, btnCustomDays.Font).Width + 36;
             Rebuild(computedDate);
         }
 

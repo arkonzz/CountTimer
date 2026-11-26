@@ -9,7 +9,7 @@ namespace CountTimer.Service
     /// <summary>
     /// 节假日计算：公历固定节日 + 农历节日（ChineseLunisolarCalendar 官方历表 1901~2100）
     /// + 清明（太阳视黄经天文算法，无需逐年硬编码）
-    /// + 自定义生日/纪念日（按年重复）+ 法定放假与调休（并入对应节日）
+    /// + 自定义生日/纪念日（按年重复）+ 发薪日这类每月重复的日子 + 法定放假与调休（并入对应节日）
     /// </summary>
     public static class HolidayService
     {
@@ -24,10 +24,13 @@ namespace CountTimer.Service
         /// <summary>Upcoming 固定截取的数量：约覆盖未来 14 个月，尾部按序截断，不会中途缺节</summary>
         private const int MaxUpcomingCount = 16;
 
+        /// <summary>遇休息日调整时最多跨过的天数：要能跨过春节这类连休</summary>
+        private const int MaxAdjustDays = 40;
+
         /// <summary>
         /// 以 today 为界把节日拆成两段（各自按日期升序）：
         /// Past 用于英雄卡"上个节日以来已过 N%"的进度计算，Upcoming 用于倒计时展示。
-        /// customDays：自定义的生日/纪念日；statutory：按年取法定放假安排，没有则为 null
+        /// customDays：自定义的生日/纪念日和每月重复的日子；statutory：按年取法定放假安排，没有则为 null
         /// </summary>
         public static (List<HolidayInfo> Past, List<HolidayInfo> Upcoming) GetAround(
             DateTime today,
@@ -44,6 +47,12 @@ namespace CountTimer.Service
             {
                 foreach (CustomDay day in customDays)
                 {
+                    if (day.kind == CustomDay.KindMonthly)
+                    {
+                        AddNearestMonthlyDays(list, day, today, fromYear, toYear, statutory);
+                        continue;
+                    }
+
                     for (int year = fromYear; year <= toYear; year++)
                     {
                         AddCustomDay(list, day, year);
@@ -56,7 +65,8 @@ namespace CountTimer.Service
                 ApplyArrangements(list, statutory);
             }
 
-            list.Sort((a, b) => a.Date.CompareTo(b.Date));
+            // 同一天既有节日又有每月重复的日子时节日在前：英雄卡优先显示节日
+            list = list.OrderBy(h => h.Date).ThenBy(h => h.IsMonthly ? 1 : 0).ToList();
             // 假期首日已过但还没放完的，仍然算在"未来"里
             var upcoming = list.FindAll(h => h.LastDay >= today.Date);
             if (upcoming.Count > MaxUpcomingCount)
@@ -227,8 +237,26 @@ namespace CountTimer.Service
         }
 
         /// <summary>自定义日子从 today（含）起的下一次发生日期</summary>
-        public static DateTime? NextCustomDay(CustomDay day, DateTime today)
+        public static DateTime? NextCustomDay(CustomDay day, DateTime today, Func<int, StatutoryYear?>? statutory = null)
         {
+            if (day.kind == CustomDay.KindMonthly)
+            {
+                // 遇休息日提前的那一次可能落在上个月，所以逐月都看一遍，取最早的一次
+                DateTime? next = null;
+                for (int offset = 0; offset <= 12; offset++)
+                {
+                    DateTime month = today.AddMonths(offset);
+                    if (MonthlyDayDate(day, month.Year, month.Month, WorkdayResolver(statutory)) is DateTime date
+                        && date >= today.Date
+                        && (next is null || date < next))
+                    {
+                        next = date;
+                    }
+                }
+
+                return next;
+            }
+
             for (int year = today.Year; year <= today.Year + 1; year++)
             {
                 if (CustomDayDate(day, year) is DateTime date && date >= today.Date)
@@ -275,6 +303,121 @@ namespace CountTimer.Service
                 NoteEn = string.Join(" · ", en),
             });
         }
+
+        #endregion
+
+        #region 每月重复的日子（发薪日、还款日这类）
+
+        /// <summary>
+        /// 每月重复的日子在 year 年 month 月的实际日期；几号不合法时为 null。
+        /// 当月没有这一天（29、30、31）时取月末；遇休息日按 adjust 提前或顺延到最近的工作日
+        /// </summary>
+        internal static DateTime? MonthlyDayDate(CustomDay day, int year, int month, Func<DateTime, bool>? isWorkday = null)
+            => MonthlyOccurrence(day, year, month, isWorkday ?? StatutoryHolidays.Instance.IsWorkday)?.Date;
+
+        /// <summary>
+        /// 只把"上一次"和"下一次"两次发生加进列表：每月重复的日子一年有 12 次，
+        /// 全加进来会把节日挤出固定长度的列表
+        /// </summary>
+        private static void AddNearestMonthlyDays(
+            List<HolidayInfo> list, CustomDay day, DateTime today, int fromYear, int toYear, Func<int, StatutoryYear?>? statutory)
+        {
+            if (day.title.Trim().Length == 0 || day.day is < 1 or > 31)
+            {
+                return;
+            }
+
+            Func<DateTime, bool> isWorkday = WorkdayResolver(statutory);
+            HolidayInfo? previous = null;
+            for (int year = fromYear; year <= toYear; year++)
+            {
+                for (int month = 1; month <= 12; month++)
+                {
+                    if (MonthlyOccurrence(day, year, month, isWorkday) is not { } occurrence)
+                    {
+                        return;
+                    }
+
+                    // 日期逐月递增：第一个不早于今天的就是下一次，它前面那一个就是上一次
+                    if (occurrence.Date >= today.Date)
+                    {
+                        if (previous is not null)
+                        {
+                            list.Add(previous);
+                        }
+
+                        list.Add(MonthlyEntry(day, occurrence));
+                        return;
+                    }
+
+                    previous = MonthlyEntry(day, occurrence);
+                }
+            }
+        }
+
+        private static HolidayInfo MonthlyEntry(CustomDay day, (DateTime Nominal, DateTime Date) occurrence)
+        {
+            (string zh, string en) = MonthlyRule(day);
+            // 日期和"每月几号"对不上时说明原因
+            if (occurrence.Date != occurrence.Nominal)
+            {
+                zh += $"（原{occurrence.Nominal.Month}月{occurrence.Nominal.Day}日）";
+                en += $" (was {occurrence.Nominal.ToString("MMM d", CultureInfo.InvariantCulture)})";
+            }
+
+            return new HolidayInfo
+            {
+                Name = day.title.Trim(),
+                NameEn = day.title.Trim(),
+                Date = occurrence.Date,
+                Note = zh,
+                NoteEn = en,
+                IsMonthly = true,
+            };
+        }
+
+        /// <summary>"每月10日"，遇休息日会挪动的再带上挪动方式；管理表格的日期列和节日列表都用它</summary>
+        internal static (string Zh, string En) MonthlyRule(CustomDay day)
+        {
+            string ordinal = day.day switch { 1 or 21 or 31 => "st", 2 or 22 => "nd", 3 or 23 => "rd", _ => "th" };
+            // 英文要短：管理表格的日期列只有 176 像素宽
+            return day.adjust switch
+            {
+                CustomDay.AdjustLater => ($"每月{day.day}日 · 遇休息日顺延", $"{day.day}{ordinal} monthly · later if off"),
+                CustomDay.AdjustNone => ($"每月{day.day}日", $"{day.day}{ordinal} monthly"),
+                _ => ($"每月{day.day}日 · 遇休息日提前", $"{day.day}{ordinal} monthly · earlier if off"),
+            };
+        }
+
+        /// <summary>某个月的原始日期和遇休息日挪动后的日期</summary>
+        private static (DateTime Nominal, DateTime Date)? MonthlyOccurrence(CustomDay day, int year, int month, Func<DateTime, bool> isWorkday)
+        {
+            if (day.day is < 1 or > 31)
+            {
+                return null;
+            }
+
+            DateTime nominal = new(year, month, Math.Min(day.day, DateTime.DaysInMonth(year, month)));
+            DateTime date = nominal;
+            int step = day.adjust switch
+            {
+                CustomDay.AdjustLater => 1,
+                CustomDay.AdjustNone => 0,
+                _ => -1,
+            };
+
+            // 连续 40 天都不是工作日不可能是真实数据，到此为止
+            for (int moved = 0; step != 0 && moved < MaxAdjustDays && !isWorkday(date); moved++)
+            {
+                date = date.AddDays(step);
+            }
+
+            return (nominal, date);
+        }
+
+        /// <summary>按法定放假安排判断工作日（周末补班算工作日，工作日放假不算）；没有当年安排时按周一至周五</summary>
+        private static Func<DateTime, bool> WorkdayResolver(Func<int, StatutoryYear?>? statutory)
+            => date => StatutoryYear.IsWorkday(date, statutory?.Invoke(date.Year));
 
         #endregion
 

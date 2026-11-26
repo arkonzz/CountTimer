@@ -80,12 +80,7 @@ namespace CountTimer.Service
         /// 是否工作日：有当年安排时按调休后的结果（周末补班算工作日，工作日放假不算），
         /// 否则按周一至周五
         /// </summary>
-        public bool IsWorkday(DateTime date)
-        {
-            StatutoryYear? data = Get(date.Year);
-            return data?.IsWorkday(date)
-                ?? (date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday));
-        }
+        public bool IsWorkday(DateTime date) => StatutoryYear.IsWorkday(date, Get(date.Year));
 
         /// <summary>后台联网更新 year 和下一年；距上次尝试不足 12 小时则跳过</summary>
         public void RefreshSoon(int year)

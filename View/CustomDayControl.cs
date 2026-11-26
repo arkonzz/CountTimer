@@ -12,12 +12,14 @@ using CountTimer.Share;
 namespace CountTimer.View
 {
     /// <summary>
-    /// 生日 / 纪念日管理（嵌入主窗体的 AntdUI 抽屉）：上方录入，下方列表可编辑、删除
+    /// 生日 / 纪念日 / 每月重复的日子（发薪日、还款日这类）管理（嵌入主窗体的 AntdUI 抽屉）：
+    /// 上方录入，按类型切换字段；下方列表可编辑、删除
     /// </summary>
     public class CustomDayControl : UserControl, AntdUI.IEventListener
     {
         private const int FormLeft = 96;        // 输入控件左边缘
         private const int FormRight = 504;      // 输入控件右边缘
+        private const int CellWidth = (FormRight - FormLeft - 24) / 3;   // 月 / 日 / 年份三等分
         private static readonly string[] MonthNamesEn = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 
         private readonly CustomDayService service = new CustomDayServiceImpl();
@@ -31,9 +33,11 @@ namespace CountTimer.View
         private readonly AntdUI.Label lblMonth = new AntdUI.Label();
         private readonly AntdUI.Label lblDay = new AntdUI.Label();
         private readonly AntdUI.Label lblYear = new AntdUI.Label();
+        private readonly AntdUI.Label lblHint = new AntdUI.Label();
         private readonly AntdUI.Input input_name = new AntdUI.Input();
         private readonly AntdUI.Select select_kind = new AntdUI.Select();
         private readonly AntdUI.Select select_calendar = new AntdUI.Select();
+        private readonly AntdUI.Select select_adjust = new AntdUI.Select();
         private readonly AntdUI.InputNumber num_month = new AntdUI.InputNumber();
         private readonly AntdUI.InputNumber num_day = new AntdUI.InputNumber();
         private readonly AntdUI.Input input_year = new AntdUI.Input();
@@ -95,32 +99,48 @@ namespace CountTimer.View
             select_calendar.Size = new Size(FormRight - FormLeft - half - 12, 40);
             Controls.Add(select_calendar);
 
+            // 每月重复没有历法：这一格换成"遇休息日怎么办"
+            select_adjust.List = true;
+            select_adjust.Location = select_calendar.Location;
+            select_adjust.Size = select_calendar.Size;
+            select_adjust.Visible = false;
+            Controls.Add(select_adjust);
+
             // 月 / 日 / 年份：小字标题放在输入框上方，三等分。年份是普通输入框，留空表示不填
             var numberFields = new (AntdUI.Label Label, string Zh, string En, AntdUI.InputNumber Input, int Maximum)[]
             {
                 (lblMonth, "月", "Month", num_month, 12),
                 (lblDay, "日", "Day", num_day, 31),
             };
-            int cellWidth = (FormRight - FormLeft - 24) / 3;
             for (int i = 0; i < numberFields.Length; i++)
             {
                 var (label, zh, en, input, maximum) = numberFields[i];
-                AddCaption(label, zh, en, i, cellWidth);
+                AddCaption(label, zh, en, i, CellWidth);
 
                 input.Minimum = 1;
                 input.Maximum = maximum;
                 input.Increment = 1;
                 input.DecimalPlaces = 0;
                 input.InterceptArrowKeys = true;
-                input.Location = new Point(FormLeft + i * (cellWidth + 12), 166);
-                input.Size = new Size(cellWidth, 36);
+                input.Location = new Point(FormLeft + i * (CellWidth + 12), 166);
+                input.Size = new Size(CellWidth, 36);
                 Controls.Add(input);
             }
 
-            AddCaption(lblYear, "年份（选填）", "Year (optional)", 2, cellWidth);
-            input_year.Location = new Point(FormLeft + 2 * (cellWidth + 12), 166);
-            input_year.Size = new Size(cellWidth, 36);
+            AddCaption(lblYear, "年份（选填）", "Year (optional)", 2, CellWidth);
+            input_year.Location = new Point(FormLeft + 2 * (CellWidth + 12), 166);
+            input_year.Size = new Size(CellWidth, 36);
             Controls.Add(input_year);
+
+            // 每月重复的说明：占月份和年份两格（每月几号挪到第一格）
+            lblHint.Font = new Font("Microsoft YaHei UI", 9F);
+            lblHint.ForeColor = UiTheme.TextSub;
+            lblHint.Location = new Point(FormLeft + CellWidth + 12, 166);
+            lblHint.Size = new Size(CellWidth * 2 + 12, 36);
+            lblHint.TextAlign = ContentAlignment.MiddleLeft;
+            lblHint.TextMultiLine = false;
+            lblHint.Visible = false;
+            Controls.Add(lblHint);
 
             btn_close.Ghost = true;
             btn_close.BorderWidth = 1F;
@@ -144,6 +164,29 @@ namespace CountTimer.View
 
             // 初始化赋值完成后再挂事件：农历每月最多三十天
             select_calendar.SelectedValueChanged += (s, e) => num_day.Maximum = select_calendar.SelectedIndex == 1 ? 30 : 31;
+            select_kind.SelectedValueChanged += (s, e) => ApplyKindLayout();
+        }
+
+        /// <summary>按类型切换录入区：每月重复没有历法、月份和年份，多一个"遇休息日怎么办"</summary>
+        private void ApplyKindLayout()
+        {
+            bool monthly = select_kind.SelectedIndex == CustomDay.KindMonthly;
+            select_calendar.Visible = !monthly;
+            select_adjust.Visible = monthly;
+            lblMonth.Visible = num_month.Visible = !monthly;
+            lblYear.Visible = input_year.Visible = !monthly;
+            lblHint.Visible = monthly;
+
+            lblDay.Location = new Point(FormLeft + (monthly ? 0 : CellWidth + 12), 148);
+            num_day.Location = new Point(lblDay.Left, 166);
+            lblDay.Text = monthly ? T("每月几号", "Day of month") : T("日", "Day");
+            input_name.PlaceholderText = monthly ? T("例如：发薪日、还款日", "e.g. Payday, Rent") : T("例如：妈妈生日", "e.g. Mom's birthday");
+
+            // 最常见的用法就是发薪日：名称还空着就先填上，要别的直接改
+            if (monthly && input_name.Text.Trim().Length == 0)
+            {
+                input_name.Text = T("发薪日", "Payday");
+            }
         }
 
         private void AddCaption(AntdUI.Label label, string zh, string en, int index, int cellWidth)
@@ -179,25 +222,30 @@ namespace CountTimer.View
         /// <summary>语言切换 / 初始化：重刷文字（下拉项重建并保持选中态）</summary>
         public void ApplyLanguage()
         {
-            lblTitle.Text = T("生日 / 纪念日", "Special days");
+            lblTitle.Text = T("生日 / 纪念日 / 每月重复", "Special days");
             foreach ((AntdUI.Label label, string zh, string en) in labels)
             {
                 label.Text = T(zh, en);
             }
 
-            input_name.PlaceholderText = T("例如：妈妈生日", "e.g. Mom's birthday");
+            lblHint.Text = T("当月没有这一天时按月末算", "If missing, last day of month");
             input_year.PlaceholderText = T("不填", "None");
-            RebuildOptions(select_kind, T("生日", "Birthday"), T("纪念日", "Anniversary"));
+            // 类型 / 遇休息日两个下拉的选项顺序即 Kind / Adjust 常量的顺序，保存时直接用选中下标
+            RebuildOptions(select_kind, T("生日", "Birthday"), T("纪念日", "Anniversary"), T("每月重复", "Monthly"));
             RebuildOptions(select_calendar, T("公历", "Solar"), T("农历", "Lunar"));
+            RebuildOptions(select_adjust, T("遇休息日提前", "Earlier if a day off"), T("遇休息日顺延", "Later if a day off"), T("遇休息日照常", "No adjustment"));
+            // 字段随类型切换；标签文字刚被上面重置过，这里再同步一遍
+            ApplyKindLayout();
             btn_close.Text = T("关闭", "Close");
             btn_save.Text = editing is null ? T("新增", "Add") : T("保存", "Save");
             table.EmptyText = T("还没有添加，填好后点新增", "Nothing yet — fill in the form and add");
 
             table.Columns.Clear();
             table.Columns.Add(new Column(nameof(Row.Name), T("名称", "Name")));
-            table.Columns.Add(new Column(nameof(Row.Date), T("日期", "Date")) { Width = "150" });
-            table.Columns.Add(new Column(nameof(Row.Next), T("下次", "Next")) { Width = "100" });
-            table.Columns.Add(new Column(nameof(Row.Action), T("操作", "Action"), ColumnAlign.Center) { Width = "120" });
+            // 日期列要放得下"每月10日 · 遇休息日提前"（英文更长）；名称列占剩下的宽度
+            table.Columns.Add(new Column(nameof(Row.Date), T("日期", "Date")) { Width = "176" });
+            table.Columns.Add(new Column(nameof(Row.Next), T("下次", "Next")) { Width = "90" });
+            table.Columns.Add(new Column(nameof(Row.Action), T("操作", "Action"), ColumnAlign.Center) { Width = "104" });
             RefreshList();
         }
 
@@ -220,6 +268,8 @@ namespace CountTimer.View
                 {
                     label.ForeColor = UiTheme.TextSub;
                 }
+
+                lblHint.ForeColor = UiTheme.TextSub;
             }
         }
 
@@ -241,6 +291,7 @@ namespace CountTimer.View
             input_name.Text = string.Empty;
             select_kind.SelectedIndex = 0;
             select_calendar.SelectedIndex = 0;
+            select_adjust.SelectedIndex = 0;
             num_month.Value = DateTime.Today.Month;
             num_day.Value = DateTime.Today.Day;
             input_year.Text = string.Empty;
@@ -251,8 +302,19 @@ namespace CountTimer.View
         {
             editing = day;
             input_name.Text = day.title;
-            select_kind.SelectedIndex = day.kind == CustomDay.KindAnniversary ? 1 : 0;
+            select_kind.SelectedIndex = day.kind switch
+            {
+                CustomDay.KindAnniversary => 1,
+                CustomDay.KindMonthly => 2,
+                _ => 0,
+            };
             select_calendar.SelectedIndex = day.isLunar ? 1 : 0;
+            select_adjust.SelectedIndex = day.adjust switch
+            {
+                CustomDay.AdjustLater => 1,
+                CustomDay.AdjustNone => 2,
+                _ => 0,
+            };
             num_month.Value = day.month;
             num_day.Value = Math.Min(day.day, (int)(num_day.Maximum ?? 31));
             input_year.Text = day.year > 0 ? day.year.ToString() : string.Empty;
@@ -268,9 +330,17 @@ namespace CountTimer.View
                 return;
             }
 
-            bool isLunar = select_calendar.SelectedIndex == 1;
-            int month = (int)num_month.Value, day = (int)num_day.Value;
-            string yearText = input_year.Text.Trim();
+            int kind = select_kind.SelectedIndex switch
+            {
+                1 => CustomDay.KindAnniversary,
+                CustomDay.KindMonthly => CustomDay.KindMonthly,
+                _ => CustomDay.KindBirthday,
+            };
+            bool monthly = kind == CustomDay.KindMonthly;
+            bool isLunar = !monthly && select_calendar.SelectedIndex == 1;
+            // 每月重复没有月份和年份：不参与校验，存库记 0
+            int month = monthly ? 1 : (int)num_month.Value, day = (int)num_day.Value;
+            string yearText = monthly ? string.Empty : input_year.Text.Trim();
             string? problem = (month, day, yearText) switch
             {
                 ( < 1, _, _) or (_, < 1, _) => T("请填写月份和日期", "Please fill in the month and day"),
@@ -296,14 +366,16 @@ namespace CountTimer.View
                 return;
             }
 
-            // 农历三十在当月没有的年份、以及 2 月 29 日，由换算兜底落到当月最后一天
+            // 农历三十在当月没有的年份、以及 2 月 29 日，由换算兜底落到当月最后一天；
+            // 每月重复的 29 / 30 / 31 同理。下拉的选项顺序即 Adjust 常量的顺序
             CustomDay target = editing ?? new CustomDay();
             target.title = title;
-            target.kind = select_kind.SelectedIndex == 1 ? CustomDay.KindAnniversary : CustomDay.KindBirthday;
+            target.kind = kind;
             target.isLunar = isLunar;
-            target.month = month;
+            target.month = monthly ? 0 : month;
             target.day = day;
-            target.year = year;
+            target.year = monthly ? 0 : year;
+            target.adjust = monthly ? select_adjust.SelectedIndex : CustomDay.AdjustEarlier;
 
             bool saved = editing is null ? service.Add(target) > 0 : service.Update(target) > 0;
             if (!saved)
@@ -375,9 +447,15 @@ namespace CountTimer.View
             table.Binding(rows);
         }
 
-        /// <summary>"农历 8月1日 · 1990年" / "Solar Jan 20" / "Lunar 8/1 · 1990"</summary>
+        /// <summary>"农历 8月1日 · 1990年" / "Solar Jan 20" / "Lunar 8/1 · 1990"；每月重复的为"每月10日 · 遇休息日提前"</summary>
         private static string Describe(CustomDay day)
         {
+            if (day.kind == CustomDay.KindMonthly)
+            {
+                (string zh, string en) = HolidayService.MonthlyRule(day);
+                return T(zh, en);
+            }
+
             string calendar = day.isLunar ? T("农历", "Lunar") : T("", "Solar");
             string date = I18n.IsEnglish
                 ? (day.isLunar ? $"{day.month}/{day.day}" : $"{MonthNamesEn[day.month - 1]} {day.day}")

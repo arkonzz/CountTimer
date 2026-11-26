@@ -39,6 +39,12 @@ namespace CountTimer.Service
 
         public bool IsOffDay(DateTime date) => date.Year == Year && offDays.Contains(date.Date);
 
+        /// <summary>是否工作日：有当年的安排就按调休后的结果算，没有（尚未公布）按周一至周五</summary>
+        public static bool IsWorkday(DateTime date, StatutoryYear? arrangement)
+            => arrangement?.Year == date.Year
+                ? arrangement.IsWorkday(date)
+                : date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday);
+
         /// <summary>是否工作日：工作日以不放假为准，周末只有被列为补班日才算；不属于本年的日期为 false</summary>
         public bool IsWorkday(DateTime date)
         {
